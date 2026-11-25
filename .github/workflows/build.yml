@@ -1,69 +1,73 @@
-name: Build RedFoxGram (Android, Linux & Windows)
+name: Build RedFoxGram
+
 on:
-push:
-branches: [ main ]
-workflow_dispatch:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
 jobs:
-build-android:
-name: Build Android APK
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
-- uses: actions/setup-java@v4
-with:
-distribution: 'temurin'
-java-version: '17'
-- uses: android-actions/setup-android@v3
-- uses: gradle/actions/setup-gradle@v4
-with:
-gradle-version: '8.9'
-- name: Build Debug APK
-env:
-TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
-TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
-run: gradle assembleDebug --no-daemon
-- uses: actions/upload-artifact@v4
-with:
-name: RedFoxGram-Android-APK
-path: composeApp/build/outputs/apk/debug/*.apk
-build-linux:
-name: Build Linux Desktop
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
-- uses: actions/setup-java@v4
-with:
-distribution: 'temurin'
-java-version: '17'
-- uses: gradle/actions/setup-gradle@v4
-with:
-gradle-version: '8.9'
-- name: Package Linux Distribution
-run: gradle createDistributable --no-daemon
-- name: Archive Linux Build
-run: tar -czf RedFoxGram-Linux-x64.tar.gz -C composeApp/build/compose/binaries/main/app .
-- uses: actions/upload-artifact@v4
-with:
-name: RedFoxGram-Linux-x64
-path: RedFoxGram-Linux-x64.tar.gz
-build-windows:
-name: Build Windows Desktop
-runs-on: windows-latest
-steps:
-- uses: actions/checkout@v4
-- uses: actions/setup-java@v4
-with:
-distribution: 'temurin'
-java-version: '17'
-- uses: gradle/actions/setup-gradle@v4
-with:
-gradle-version: '8.9'
-- name: Package Windows Executable
-run: gradle createDistributable --no-daemon
-- name: Archive Windows Build
-shell: pwsh
-run: Compress-Archive -Path composeApp\build\compose\binaries\main\app* -DestinationPath RedFoxGram-Windows-x64.zip
-- uses: actions/upload-artifact@v4
-with:
-name: RedFoxGram-Windows-x64
-path: RedFoxGram-Windows-x64.zip
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Build Debug APK
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RedFoxGram-Android-APK
+          path: composeApp/build/outputs/apk/debug/*.apk
+
+  build-linux:
+    name: Build Linux Desktop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Package Linux Distribution
+        run: gradle createDistributable --no-daemon
+      - name: Archive Linux Build
+        run: tar -czf RedFoxGram-Linux-x64.tar.gz -C composeApp/build/compose/binaries/main/app .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RedFoxGram-Linux-x64
+          path: RedFoxGram-Linux-x64.tar.gz
+
+  build-windows:
+    name: Build Windows Desktop
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Package Windows Executable
+        run: gradle createDistributable --no-daemon
+      - name: Archive Windows Build
+        shell: pwsh
+        run: Compress-Archive -Path composeApp\build\compose\binaries\main\app\* -DestinationPath RedFoxGram-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RedFoxGram-Windows-x64
+          path: RedFoxGram-Windows-x64.zip
