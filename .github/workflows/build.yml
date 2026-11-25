@@ -15,7 +15,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
@@ -44,7 +43,10 @@ jobs:
       - name: Package Linux Distribution
         run: gradle createDistributable --no-daemon
       - name: Archive Linux Build
-        run: tar -czf RedFoxGram-Linux-x64.tar.gz -C composeApp/build/compose/binaries/main/app .
+        run: |
+          mkdir -p dist_linux
+          cp -r composeApp/build/compose/binaries/main/app/* dist_linux/
+          tar -czf RedFoxGram-Linux-x64.tar.gz -C dist_linux .
       - uses: actions/upload-artifact@v4
         with:
           name: RedFoxGram-Linux-x64
