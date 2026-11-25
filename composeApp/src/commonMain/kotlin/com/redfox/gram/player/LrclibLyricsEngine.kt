@@ -58,11 +58,11 @@ object LrclibLyricsEngine {
         val regex = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})](.*)""")
         return lrcRaw.lines().mapNotNull { line ->
             val match = regex.find(line.trim()) ?: return@mapNotNull null
-            val min = match.groupValues.toLongOrNull() ?: 0L
-            val sec = match.groupValues.toLongOrNull() ?: 0L
-            val fracStr = match.groupValues
+            val min = match.groupValues.getOrNull(1)?.toLongOrNull() ?: 0L
+            val sec = match.groupValues.getOrNull(2)?.toLongOrNull() ?: 0L
+            val fracStr = match.groupValues.getOrNull(3) ?: "00"
             val ms = if (fracStr.length == 2) (fracStr.toLongOrNull() ?: 0L) * 10L else (fracStr.toLongOrNull() ?: 0L)
-            val text = match.groupValues.trim()
+            val text = (match.groupValues.getOrNull(4) ?: "").trim()
             if (text.isBlank()) null else LyricLine(min * 60_000L + sec * 1000L + ms, text)
         }.sortedBy { it.timeMs }
     }
