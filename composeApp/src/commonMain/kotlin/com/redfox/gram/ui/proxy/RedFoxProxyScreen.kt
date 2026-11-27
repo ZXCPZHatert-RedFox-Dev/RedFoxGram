@@ -71,7 +71,7 @@ fun RedFoxProxyScreen(onBack: () -> Unit) {
                                 )
                                 val activeNode = state.nodes.find { it.id == state.activeNodeId }
                                 Text(
-                                    text = activeNode?.let { "${it.name} • ${it.pingMs} мс" } ?: "Прямое соединение",
+                                    text = activeNode?.let { "${it.name} • ${it.pingMs} мс" } ?: state.statusNote,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
