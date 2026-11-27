@@ -21,6 +21,14 @@ jobs:
         with:
           validate-wrappers: false
           gradle-version: 8.9
+      - name: Bundle Native Xray-core (arm64-v8a)
+        run: |
+          mkdir -p composeApp/src/androidMain/jniLibs/arm64-v8a
+          curl -fL -s "https://github.com" -o xray.zip
+          unzip -o xray.zip xray -d xray_tmp
+          mv xray_tmp/xray composeApp/src/androidMain/jniLibs/arm64-v8a/libxray.so
+          chmod +x composeApp/src/androidMain/jniLibs/arm64-v8a/libxray.so
+          rm -rf xray.zip xray_tmp
       - name: Build Debug APK
         env:
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
