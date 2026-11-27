@@ -225,6 +225,82 @@ runCatching { client?.logOut() }
 }
 }
 
+    
+    data class LiveMessageItem(
+        val id: Long,
+        val senderName: String,
+        val text: String,
+        val isOutgoing: Boolean,
+        val timeText: String,
+        val isDeletedSaved: Boolean = false
+    )
+
+    private val _activeChatMessages = MutableStateFlow<List<LiveMessageItem>>(emptyList())
+    val activeChatMessages = _activeChatMessages.asStateFlow()
+    private var currentOpenedChatId: Long = 0L
+
+    fun openChatHistory(chatId: Long) {
+        currentOpenedChatId = chatId
+        _activeChatMessages.value = emptyList()
+        scope.launch {
+            val tdl = client ?: return@launch
+            val histRes = tdl.getChatHistory(
+                chatId = chatId,
+                fromMessageId = 0L,
+                offset = 0,
+                limit = 40,
+                onlyLocal = false
+            )
+            val messages = (histRes as? TdlResult.Success)?.result?.messages ?: return@launch
+            val items = messages.filterNotNull().map { msg -> mapTdMessage(msg) }.reversed()
+            _activeChatMessages.value = items
+        }
+    }
+
+    fun sendTextMessage(chatId: Long, text: String) {
+        if (text.isBlank()) return
+        scope.launch {
+            val tdl = client ?: return@launch
+            val content = InputMessageText(
+                text = FormattedText(text = text, entities = emptyArray()),
+                linkPreviewOptions = null,
+                clearDraft = true
+            )
+            val res = tdl.sendMessage(
+                chatId = chatId,
+                messageThreadId = 0L,
+                replyTo = null,
+                options = null,
+                replyMarkup = null,
+                inputMessageContent = content
+            )
+            if (res is TdlResult.Success) {
+                openChatHistory(chatId)
+            }
+        }
+    }
+
+    private fun mapTdMessage(msg: Message): LiveMessageItem {
+        val text = when (val c = msg.content) {
+            is MessageText -> c.text.text
+            is MessagePhoto -> "[Фотография] ${c.caption.text}".trim()
+            is MessageVideo -> "[Видео] ${c.caption.text}".trim()
+            is MessageVoiceNote -> "[Голосовое сообщение]"
+            is MessageVideoNote -> "[Видеосообщение (кружочек)]"
+            is MessageSticker -> "[Стикер ${c.sticker.emoji}]"
+            is MessageDocument -> "[Файл: ${c.document.fileName}]"
+            else -> "[Медиа / Системное сообщение]"
+        }
+        val sender = if (msg.isOutgoing) "Вы" else "Собеседник"
+        return LiveMessageItem(
+            id = msg.id,
+            senderName = sender,
+            text = text,
+            isOutgoing = msg.isOutgoing,
+            timeText = "TG"
+        )
+    }
+
     fun refreshChatsNow() {
         scope.launch { client?.let { loadRealChats(it) } }
     }
