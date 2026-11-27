@@ -113,19 +113,21 @@ object RedFoxTdEngine {
 
     private suspend fun loadRealChats(tdl: TdlClient) {
         runCatching {
-            val chatsResult = tdl.getChats(chatList = ChatListMain(), limit = 40)
-            val previews = chatsResult.chatIds.mapNotNull { id ->
-                runCatching {
-                    val chat = tdl.getChat(chatId = id)
-                    val lastText = when (val content = chat.lastMessage?.content) {
-                        is MessageText -> content.text.text
-                        is MessagePhoto -> "Фотография"
-                        is MessageVideo -> "Видео"
-                        is MessageVoiceNote -> "Голосовое сообщение"
-                        is MessageVideoNote -> "Видеосообщение (кружочек)"
-                        is MessageSticker -> "Стикер ${content.sticker.emoji}"
-                        else -> "Медиа / Сообщение"
-                    }
+            val chatsRes = tdl.getChats(chatList = ChatListMain(), limit = 40)
+            val ids: LongArray = chatsRes.getOrNull()?.chatIds ?: return
+            val previews = mutableListOf<ChatPreview>()
+            for (chatId in ids) {
+                val chat: Chat = tdl.getChat(chatId = chatId).getOrNull() ?: continue
+                val lastText = when (val content = chat.lastMessage?.content) {
+                    is MessageText -> content.text.text
+                    is MessagePhoto -> "Фотография"
+                    is MessageVideo -> "Видео"
+                    is MessageVoiceNote -> "Голосовое сообщение"
+                    is MessageVideoNote -> "Видеосообщение (кружочек)"
+                    is MessageSticker -> "Стикер ${content.sticker.emoji}"
+                    else -> "Медиа / Сообщение"
+                }
+                previews.add(
                     ChatPreview(
                         id = chat.id,
                         title = chat.title,
@@ -133,7 +135,7 @@ object RedFoxTdEngine {
                         time = "Онлайн",
                         unreadCount = chat.unreadCount
                     )
-                }.getOrNull()
+                )
             }
             if (previews.isNotEmpty()) {
                 RedFoxBridge.pushDialogsFromEngine(previews)
@@ -158,41 +160,44 @@ object RedFoxTdEngine {
                     settings = authSettings
                 )
             }.onFailure {
+                RedFoxAuthManager.setAuthError(it.message ?: "Ошибка отправки номера")
+            }
+        }
+    }
 
-RedFoxAuthManager.setAuthError(it.message ?: "Ошибка отправки номера")
-}
-}
-}
-fun resendCode() {
-scope.launch {
-runCatching {
-client?.resendAuthenticationCode(reason = ResendCodeReasonUserRequest())
-}.onFailure {
-RedFoxAuthManager.setAuthError(it.message ?: "Не удалось запросить код повторно")
-}
-}
-}
-fun sendAuthCode(code: String) {
-scope.launch {
-runCatching {
-client?.checkAuthenticationCode(code = code)
-}.onFailure {
-RedFoxAuthManager.setAuthError(it.message ?: "Неверный код подтверждения")
-}
-}
-}
-fun sendPassword2FA(password: String) {
-scope.launch {
-runCatching {
-client?.checkAuthenticationPassword(password = password)
-}.onFailure {
-RedFoxAuthManager.setAuthError(it.message ?: "Неверный пароль 2FA")
-}
-}
-}
-fun logOut() {
-scope.launch {
-runCatching { client?.logOut() }
-}
-}
+    fun resendCode() {
+        scope.launch {
+            runCatching {
+                client?.resendAuthenticationCode(reason = ResendCodeReasonUserRequest())
+            }.onFailure {
+                RedFoxAuthManager.setAuthError(it.message ?: "Не удалось запросить код повторно")
+            }
+        }
+    }
+
+    fun sendAuthCode(code: String) {
+        scope.launch {
+            runCatching {
+                client?.checkAuthenticationCode(code = code)
+            }.onFailure {
+                RedFoxAuthManager.setAuthError(it.message ?: "Неверный код подтверждения")
+            }
+        }
+    }
+
+    fun sendPassword2FA(password: String) {
+        scope.launch {
+            runCatching {
+                client?.checkAuthenticationPassword(password = password)
+            }.onFailure {
+                RedFoxAuthManager.setAuthError(it.message ?: "Неверный пароль 2FA")
+            }
+        }
+    }
+
+    fun logOut() {
+        scope.launch {
+            runCatching { client?.logOut() }
+        }
+    }
 }
