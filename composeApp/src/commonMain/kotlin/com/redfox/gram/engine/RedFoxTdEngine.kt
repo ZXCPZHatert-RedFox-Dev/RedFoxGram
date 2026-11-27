@@ -90,6 +90,7 @@ forceRead = true
 }
 }
 loadRealChats(tdl)
+                harvestProxiesFromTelegramChannels()
 }
 }
 // 3. Реальный перехват удаленных сообщений (AyuGram / Opexgram)
@@ -377,7 +378,28 @@ RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message
 }
 }
 }
-fun refreshChatsNow() {
+
+    fun harvestProxiesFromTelegramChannels() {
+        scope.launch {
+            val tdl = client ?: return@launch
+            val channels = listOf("ProxyMTProto", "mtproto_proxy_list", "TelMTProto")
+            val linkRegex = Regex("""(?:tg://proxy|t\.me/proxy)\?server=([a-zA-Z0-9.\-]+)&port=(\d+)&secret=([a-zA-Z0-9_\-=]+)""")
+            for (username in channels) {
+                val chatRes = tdl.searchPublicChat(username = username)
+                val chat = (chatRes as? TdlResult.Success)?.result ?: continue
+                val histRes = tdl.getChatHistory(chatId = chat.id, fromMessageId = 0L, offset = 0, limit = 15, onlyLocal = false)
+                val msgs = (histRes as? TdlResult.Success)?.result?.messages ?: continue
+                for (m in msgs.filterNotNull()) {
+                    val txt = extractContentText(m.content)
+                    linkRegex.findAll(txt).forEach { match ->
+                        RedFoxProxyManager.addFromLink(match.value, silent = true)
+                    }
+                }
+            }
+        }
+    }
+
+    fun refreshChatsNow() {
 scope.launch { client?.let { loadRealChats(it) } }
 }
 fun logOut() {

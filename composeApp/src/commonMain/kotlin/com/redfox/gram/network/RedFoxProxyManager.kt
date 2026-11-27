@@ -234,7 +234,7 @@ object RedFoxProxyManager {
         }
     }
 
-    fun addFromLink(rawLink: String): Boolean {
+    fun addFromLink(rawLink: String, silent: Boolean = false): Boolean {
         val clean = rawLink.trim()
 
 if (!clean.contains("server=") || !clean.contains("port=")) return false
