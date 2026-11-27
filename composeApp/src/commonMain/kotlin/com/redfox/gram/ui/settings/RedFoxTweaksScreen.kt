@@ -69,6 +69,40 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
                 }
             }
 
+            // Блок 0: Opexgram (Безопасность, Инспектор и Фильтры)
+            item {
+                SectionHeader("Opexgram (Защита, Инспектор и Фильтры)")
+                SettingsCard {
+                    TweakSwitchRow(
+                        title = "Ложный пароль-маскировка (Stealth Pass)",
+                        subtitle = "Скрывать личные чаты и архив при вводе резервного кода",
+                        checked = state.opexFakePasscodeMask,
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(opexFakePasscodeMask = v) } }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    TweakSwitchRow(
+                        title = "Инспектор сообщений (ID, DC, JSON)",
+                        subtitle = "Показывать дата-центр (DC1-DC5), точное время и сырые данные",
+                        checked = state.opexMessageInspector,
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(opexMessageInspector = v) } }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    TweakSwitchRow(
+                        title = "Фильтр спама по ключевым словам",
+                        subtitle = "Скрывать посты и сообщения по локальному списку стоп-слов",
+                        checked = state.opexKeywordSpamFilter,
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(opexKeywordSpamFilter = v) } }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    TweakSwitchRow(
+                        title = "Анти-скриншот и иконки устройств",
+                        subtitle = "Блокировать отчеты о скриншотах и показывать ОС собеседника",
+                        checked = state.opexAntiScreenshotAlert,
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(opexAntiScreenshotAlert = v, opexShowClientDeviceIcon = v) } }
+                    )
+                }
+            }
+
             item {
                 SectionHeader("AyuGram & Opex (Стелс и история)")
                 SettingsCard {

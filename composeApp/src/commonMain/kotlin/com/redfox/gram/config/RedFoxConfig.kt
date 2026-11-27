@@ -6,8 +6,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 enum class ClientPreset(val title: String, val badge: String, val description: String) {
-    ULTIMATE("RedFox Ultimate", "ALL-IN-ONE M3E", "Все фичи AyuGram, Cherrygram, Hortay, MonoGram, exteraGram + M3E"),
-    AYU_OPEX("AyuGram & Opex", "STEALTH & HISTORY", "Максимальный призрак, анти-удаление и локальная история правок"),
+    ULTIMATE("RedFox Ultimate", "ALL-IN-ONE M3E", "Все фичи Opexgram, AyuGram, Cherrygram, Hortay, MonoGram, extera + M3E"),
+    OPEX_FORTRESS("Opexgram Fortress", "OPEX STEALTH", "Локальный пароль-маскировка, инспектор DC/ID, анти-скриншот и фильтр спама"),
+    AYU_STEALTH("AyuGram Stealth", "GHOST & HISTORY", "Максимальный призрак, анти-удаление и локальная история правок"),
     CHERRY_EXTERA("Cherrygram & extera", "CHATS & MEDIA", "Пересылка без автора, перемотка кружочков, плагины .rfplugin"),
     HORTAY_MONO("Hortay & MonoGram", "PURE M3E FEED", "Лента каналов в стиле M3E, пружинная физика и дизайн Material 3"),
     MATE_MATERIAL("Mategram & Materialgram", "TOOLS & ADMIN", "Автоперевод, быстрое меню админа, массовая очистка >100 сообщ."),
@@ -16,22 +17,33 @@ enum class ClientPreset(val title: String, val badge: String, val description: S
 
 data class RedFoxSettingsState(
     val activePreset: ClientPreset = ClientPreset.ULTIMATE,
+    // --- Opexgram (Безопасность, инспектор, фильтры) ---
+    val opexFakePasscodeMask: Boolean = true,
+    val opexMessageInspector: Boolean = true,
+    val opexKeywordSpamFilter: Boolean = true,
+    val opexAntiScreenshotAlert: Boolean = true,
+    val opexShowClientDeviceIcon: Boolean = true,
+    val opexQuickSaveToFavorites: Boolean = true,
+    // --- AyuGram (Стелс и история) ---
     val ghostReadMessages: Boolean = true,
     val ghostReadStories: Boolean = true,
     val hideTypingStatus: Boolean = true,
     val forceOffline: Boolean = false,
     val antiDeleteMessages: Boolean = true,
     val saveEditHistory: Boolean = true,
+    // --- Cherrygram & exteraGram (Удобство и медиа) ---
     val quickForwardNoQuote: Boolean = true,
     val seekableVideoNotes: Boolean = true,
     val sendHighResPhotos: Boolean = true,
     val pluginsEnabled: Boolean = true,
     val disableSponsoredAds: Boolean = true,
     val hidePhoneNumber: Boolean = true,
+    // --- Hortay, MonoGram & Materialgram (M3E и лента) ---
     val channelFeedMode: Boolean = false,
     val springPhysicsScroll: Boolean = true,
     val googleSansFont: Boolean = true,
     val adminQuickMenu: Boolean = true,
+    // --- Mategram, NekoX & RedFox (Перевод, прокси, плеер) ---
     val autoTranslateForeign: Boolean = true,
     val showUserIdsAndDc: Boolean = true,
     val smartProxyRotation: Boolean = true,
@@ -51,7 +63,18 @@ object RedFoxConfig {
         _state.update {
             when (preset) {
                 ClientPreset.ULTIMATE -> RedFoxSettingsState(activePreset = preset)
-                ClientPreset.AYU_OPEX -> it.copy(
+                ClientPreset.OPEX_FORTRESS -> it.copy(
+                    activePreset = preset,
+                    opexFakePasscodeMask = true,
+                    opexMessageInspector = true,
+                    opexKeywordSpamFilter = true,
+                    opexAntiScreenshotAlert = true,
+                    opexShowClientDeviceIcon = true,
+                    opexQuickSaveToFavorites = true,
+                    ghostReadMessages = true,
+                    antiDeleteMessages = true
+                )
+                ClientPreset.AYU_STEALTH -> it.copy(
                     activePreset = preset,
                     ghostReadMessages = true,
                     ghostReadStories = true,
