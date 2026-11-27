@@ -35,7 +35,6 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                 .padding(24.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Верхняя плашка статуса соединения и TDLib
             Card(
                 onClick = onOpenProxy,
                 shape = RoundedCornerShape(20.dp),
@@ -71,7 +70,6 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                 }
             }
 
-            // Центральная карточка авторизации M3E
             Card(
                 shape = RoundedCornerShape(32.dp),
                 colors = CardDefaults.cardColors(
@@ -127,48 +125,47 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                                     value = authState.codeInput,
                                     onValueChange = { RedFoxAuthManager.updateCode(it) },
                                     label = { Text("5-значный код") },
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(18.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Button(
-                                    onClick = { RedFoxAuthManager.verifyCode() },
-                                    enabled = !authState.isLoading,
-                                    shape = RoundedCornerShape(18.dp),
-                                    modifier = Modifier.fillMaxWidth().height(52.dp)
-                                ) {
-                                    Text("Подтвердить код", fontWeight = FontWeight.Bold)
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    TextButton(onClick = { RedFoxAuthManager.moveToStep(AuthStep.PHONE) }) {
-                                        Text("<- Изменить номер")
-                                    }
-                                    TextButton(onClick = { RedFoxTdEngine.resendCode() }) {
-                                        Text("Повторить код")
-                                    }
-                                }
-                            }
 
-                            AuthStep.PASSWORD_2FA -> {
-                                Text("Облачный пароль (2FA)", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                                Text(
-                                    "Введите ваш двухэтапный пароль от аккаунта Telegram.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                OutlinedTextField(
-                                    value = authState.password2FA,
-                                    onValueChange = { RedFoxAuthManager.updatePassword2FA(it) },
-                                    label = { Text("Пароль 2FA") },
-                                    visualTransformation = PasswordVisualTransformation(),
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(18.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-Используйте код с осторожностью.
+singleLine = true,
+shape = RoundedCornerShape(18.dp),
+modifier = Modifier.fillMaxWidth()
+)
+Button(
+onClick = { RedFoxAuthManager.verifyCode() },
+enabled = !authState.isLoading,
+shape = RoundedCornerShape(18.dp),
+modifier = Modifier.fillMaxWidth().height(52.dp)
+) {
+Text("Подтвердить код", fontWeight = FontWeight.Bold)
+}
+Row(
+modifier = Modifier.fillMaxWidth(),
+horizontalArrangement = Arrangement.SpaceBetween
+) {
+TextButton(onClick = { RedFoxAuthManager.moveToStep(AuthStep.PHONE) }) {
+Text("<- Изменить номер")
+}
+TextButton(onClick = { RedFoxTdEngine.resendCode() }) {
+Text("Повторить код")
+}
+}
+}
+AuthStep.PASSWORD_2FA -> {
+Text("Облачный пароль (2FA)", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+Text(
+"Введите ваш двухэтапный пароль от аккаунта Telegram.",
+style = MaterialTheme.typography.bodyMedium,
+color = MaterialTheme.colorScheme.onSurfaceVariant
+)
+OutlinedTextField(
+value = authState.password2FA,
+onValueChange = { RedFoxAuthManager.updatePassword2FA(it) },
+label = { Text("Пароль 2FA") },
+visualTransformation = PasswordVisualTransformation(),
+singleLine = true,
+shape = RoundedCornerShape(18.dp),
+modifier = Modifier.fillMaxWidth()
+)
 Button(
 onClick = { RedFoxAuthManager.completeLogin(skip2FA = false) },
 enabled = !authState.isLoading,
