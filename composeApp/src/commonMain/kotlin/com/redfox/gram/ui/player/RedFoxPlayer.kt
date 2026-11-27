@@ -22,20 +22,17 @@ import kotlin.math.sin
 
 data class LrcLine(val timeMs: Long, val text: String)
 
-/**
- * Парсер синхронизированных текстов песен формата LRCLIB ([mm:ss.xx] Строка)
- */
 object LrcParser {
-    private val regex = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})](.*)""")
+    private val regex = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})](.*)")
 
     fun parse(rawLrc: String): List<LrcLine> {
         return rawLrc.lines().mapNotNull { line ->
             val match = regex.find(line.trim()) ?: return@mapNotNull null
-            val min = match.groupValues[1].toLongOrNull() ?: 0L
-            val sec = match.groupValues[2].toLongOrNull() ?: 0L
-            val msStr = match.groupValues[3]
+            val (_, minStr, secStr, msStr, rawText) = match.groupValues
+            val min = minStr.toLongOrNull() ?: 0L
+            val sec = secStr.toLongOrNull() ?: 0L
             val ms = if (msStr.length == 2) (msStr.toLongOrNull() ?: 0L) * 10 else (msStr.toLongOrNull() ?: 0L)
-            val text = match.groupValues[4].trim()
+            val text = rawText.trim()
             if (text.isEmpty()) null else LrcLine(min * 60_000 + sec * 1000 + ms, text)
         }.sortedBy { it.timeMs }
     }
@@ -45,9 +42,6 @@ object LrcParser {
     }
 }
 
-/**
- * Мини-бар вверху экрана с живой строкой текста песни из LRCLIB
- */
 @Composable
 fun LiveLrcMiniBar(
     trackTitle: String,
@@ -97,9 +91,6 @@ fun LiveLrcMiniBar(
     }
 }
 
-/**
- * Фирменная волнистая полоса перемотки в стиле Material 3 Expressive (Android / Windows / Linux)
- */
 @Composable
 fun WavySeekbar(
     progress: Float,
@@ -136,7 +127,6 @@ fun WavySeekbar(
         val amplitude = if (isPlaying) 6.dp.toPx() else 0f
         val wavelength = 28.dp.toPx()
 
-        // Неактивная прямая часть справа
         drawLine(
             color = trackColor,
             start = Offset(activeWidth, midY),
@@ -145,7 +135,6 @@ fun WavySeekbar(
             cap = StrokeCap.Round
         )
 
-        // Активная волнистая часть слева
         if (activeWidth > 0f) {
             val path = Path()
             path.moveTo(0f, midY)
@@ -162,7 +151,6 @@ fun WavySeekbar(
             )
         }
 
-        // Ползунок (Thumb)
         drawCircle(
             color = primaryColor,
             radius = 7.dp.toPx(),
