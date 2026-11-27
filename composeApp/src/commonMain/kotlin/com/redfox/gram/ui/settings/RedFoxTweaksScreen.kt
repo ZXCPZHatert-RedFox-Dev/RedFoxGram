@@ -16,6 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.redfox.gram.config.ClientPreset
 import com.redfox.gram.ui.components.Android17Switch
+import com.redfox.gram.ui.proxy.RedFoxProxyScreen
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.redfox.gram.config.RedFoxConfig
 import com.redfox.gram.config.RedFoxSettingsState
 
@@ -23,6 +27,8 @@ import com.redfox.gram.config.RedFoxSettingsState
 @Composable
 fun RedFoxTweaksScreen(onBack: () -> Unit) {
     val state: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
+    var showProxyHub by remember { mutableStateOf(false) }
+    if (showProxyHub) { RedFoxProxyScreen(onBack = { showProxyHub = false }); return }
 
     Scaffold(
         topBar = {
@@ -52,6 +58,7 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item { Card(onClick = { showProxyHub = true }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) { Column(Modifier.fillMaxWidth().padding(16.dp)) { Text("RedFox Shield • Встроенный обход без VPN", fontWeight = FontWeight.Bold); Text("MTProto Fake-TLS, SOCKS5, авто-ротация и парсер t.me/proxy ->", style = MaterialTheme.typography.bodySmall) } } }
             item {
                 SectionHeader("Пресеты клиентов (Быстрое переключение)")
                 Row(
