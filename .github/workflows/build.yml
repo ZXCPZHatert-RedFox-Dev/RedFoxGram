@@ -17,6 +17,8 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
         with:
+          validate-wrappers: false
+        with:
           gradle-version: 8.9
       - name: Build Debug APK
         env:
@@ -38,6 +40,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
         with:
           gradle-version: 8.9
       - name: Package Linux Distribution
@@ -62,6 +66,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
         with:
           gradle-version: 8.9
       - name: Package Windows Executable
