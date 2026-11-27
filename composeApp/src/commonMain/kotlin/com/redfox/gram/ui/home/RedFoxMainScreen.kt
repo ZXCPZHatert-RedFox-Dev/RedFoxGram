@@ -7,9 +7,11 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -24,11 +26,13 @@ import com.redfox.gram.bridge.RedFoxBridge
 import com.redfox.gram.config.RedFoxConfig
 import com.redfox.gram.config.RedFoxSettingsState
 import com.redfox.gram.engine.RedFoxTdEngine
+import com.redfox.gram.network.RedFoxProxyManager
 import com.redfox.gram.ui.chat.RedFoxChatScreen
 import com.redfox.gram.ui.components.ExpressiveAvatarStyle
 import com.redfox.gram.ui.components.buildExpressiveAvatarShape
 import com.redfox.gram.ui.player.LiveLrcMiniBar
 import com.redfox.gram.ui.player.RedFoxFullPlayerScreen
+import com.redfox.gram.ui.proxy.RedFoxProxyScreen
 import com.redfox.gram.ui.settings.RedFoxTweaksScreen
 
 data class ChatPreview(
@@ -41,21 +45,36 @@ data class ChatPreview(
     val translatedTag: String? = null
 )
 
+private enum class HomeFolderTab(val title: String) {
+    ALL("Все"),
+    PERSONAL("Личные"),
+    CHANNEL_FEED("Лента каналов")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedFoxMainScreen() {
     val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
     val realChats by RedFoxBridge.liveChats.collectAsState()
+    val channelPosts by RedFoxTdEngine.channelFeedPosts.collectAsState()
+    val proxyState by RedFoxProxyManager.state.collectAsState()
+
     var showTweaks by remember { mutableStateOf(false) }
     var showFullPlayer by remember { mutableStateOf(false) }
+    var showProxyHub by remember { mutableStateOf(false) }
     var openedChat by remember { mutableStateOf<ChatPreview?>(null) }
     var isPlaying by remember { mutableStateOf(true) }
     var avatarStyle by remember { mutableStateOf(ExpressiveAvatarStyle.FLOWER_12) }
+    var activeTab by remember { mutableStateOf(HomeFolderTab.ALL) }
 
     LaunchedEffect(Unit) {
         RedFoxTdEngine.refreshChatsNow()
     }
 
+    if (showProxyHub) {
+        RedFoxProxyScreen(onBack = { showProxyHub = false })
+        return
+    }
     if (showTweaks) {
         RedFoxTweaksScreen(onBack = { showTweaks = false })
         return
@@ -83,19 +102,33 @@ fun RedFoxMainScreen() {
             ChatPreview(
                 id = 1,
                 title = "Загрузка реальных чатов TDLib...",
-                lastMessage = "Нажмите кнопку обновления сверху или подождите пару секунд",
+                lastMessage = "Нажмите кнопку обновления или подождите пару секунд",
                 time = "Сейчас",
                 unreadCount = 1
             )
         )
     }
 
-    val displayedChats = if (realChats.isNotEmpty()) realChats else fallbackDemoChats
+    val baseChats = if (realChats.isNotEmpty()) realChats else fallbackDemoChats
+    val filteredChats = when (activeTab) {
+        HomeFolderTab.ALL -> baseChats
+        HomeFolderTab.PERSONAL -> baseChats.filter { it.time != "Канал" }
+        HomeFolderTab.CHANNEL_FEED -> emptyList()
+    }
 
     Scaffold(
         topBar = {
             Column {
                 CenterAlignedTopAppBar(
+                    navigationIcon = {
+                        TextButton(onClick = { showProxyHub = true }) {
+                            Text(
+                                text = if (proxyState.enabled) "Shield ON" else "Shield",
+                                fontWeight = FontWeight.Bold,
+                                color = if (proxyState.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -103,7 +136,7 @@ fun RedFoxMainScreen() {
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold
                             )
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(6.dp))
                             Surface(
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -124,10 +157,38 @@ fun RedFoxMainScreen() {
                     },
                     actions = {
                         TextButton(onClick = { RedFoxTdEngine.refreshChatsNow() }) {
-                            Text("Обновить")
+                            Text("↻", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                     }
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    HomeFolderTab.entries.forEach { tab ->
+                        val selected = activeTab == tab
+                        FilterChip(
+                            selected = selected,
+                            onClick = { activeTab = tab },
+                            shape = CircleShape,
+                            label = {
+                                Text(
+                                    text = if (tab == HomeFolderTab.CHANNEL_FEED && channelPosts.isNotEmpty()) {
+                                        "${tab.title} (${channelPosts.size})"
+                                    } else {
+                                        tab.title
+                                    },
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        )
+                    }
+                }
+
                 if (settings.liveLrcLyricsBar) {
                     LiveLrcMiniBar(
                         trackTitle = "Midnight City (M3E Remix)",
@@ -171,28 +232,68 @@ fun RedFoxMainScreen() {
                             onClick = { showTweaks = true },
                             shape = CircleShape
                         ) {
-                            Text("All-in-One M3E")
-                        }
-                    }
-                }
-            }
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(displayedChats, key = { it.id }) { chat ->
-                ExpressiveChatCard(
-                    chat = chat,
 
+Text("All-in-One M3E")
+}
+}
+}
+}
+}
+) { padding ->
+LazyColumn(
+modifier = Modifier
+.fillMaxSize()
+.padding(padding)
+.padding(horizontal = 14.dp),
+verticalArrangement = Arrangement.spacedBy(10.dp)
+) {
+if (activeTab == HomeFolderTab.CHANNEL_FEED) {
+if (channelPosts.isEmpty()) {
+item {
+Surface(
+shape = RoundedCornerShape(24.dp),
+color = MaterialTheme.colorScheme.surfaceContainerLow,
+modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+) {
+Text(
+text = "Лента каналов пуста — подпишитесь на каналы или нажмите ↻",
+modifier = Modifier.padding(20.dp),
+style = MaterialTheme.typography.bodyMedium
+)
+}
+}
+} else {
+items(channelPosts, key = { "${it.senderName}_${it.id}" }) { post ->
+Surface(
+shape = RoundedCornerShape(26.dp),
+color = MaterialTheme.colorScheme.surfaceContainerLow,
+modifier = Modifier.fillMaxWidth()
+) {
+Column(modifier = Modifier.padding(16.dp)) {
+Text(
+text = post.senderName,
+style = MaterialTheme.typography.titleSmall,
+fontWeight = FontWeight.Bold,
+color = MaterialTheme.colorScheme.primary
+)
+Spacer(Modifier.height(6.dp))
+Text(
+text = post.text,
+style = MaterialTheme.typography.bodyMedium
+)
+}
+}
+}
+}
+} else {
+items(filteredChats, key = { it.id }) { chat ->
+ExpressiveChatCard(
+chat = chat,
 avatarStyle = avatarStyle,
 antiDeleteEnabled = settings.antiDeleteMessages,
 onClick = { openedChat = chat }
 )
+}
 }
 item { Spacer(Modifier.height(88.dp)) }
 }
