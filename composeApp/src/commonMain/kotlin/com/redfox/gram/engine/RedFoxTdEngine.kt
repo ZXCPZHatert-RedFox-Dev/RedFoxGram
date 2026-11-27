@@ -15,11 +15,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object RedFoxTdEngine {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var client: TdlClient? = null
     private var started = false
 
-    private val _connectionStatus = MutableStateFlow("Запуск нативного ядра TDLib...")
+    private val _connectionStatus = MutableStateFlow("Инициализация ядра TDLib...")
     val connectionStatus = _connectionStatus.asStateFlow()
 
     fun start(dbDirectory: String = "redfox_tdlib_db") {
@@ -29,34 +29,41 @@ object RedFoxTdEngine {
         scope.launch {
             try {
                 if (RedFoxSecrets.API_ID == 0 || RedFoxSecrets.API_HASH.isBlank()) {
-                    _connectionStatus.value = "Ошибка: не заданы API_ID / API_HASH в сборке!"
-                    RedFoxAuthManager.setAuthError("Ключи TELEGRAM_API_ID / API_HASH пусты")
+                    _connectionStatus.value = "Ошибка: не заданы API_ID / API_HASH!"
+                    RedFoxAuthManager.setAuthError("Ключи TELEGRAM_API_ID / API_HASH не переданы при сборке")
                     return@launch
                 }
 
-                val tdl = TdlClient.create()
+                _connectionStatus.value = "Загрузка нативной библиотеки TDLib..."
+                val tdl = withTimeoutOrNull(6000L) {
+                    TdlClient.create()
+                }
+                if (tdl == null) {
+                    _connectionStatus.value = "Таймаут загрузки нативного TDLib (.so)"
+                    RedFoxAuthManager.setAuthError("Нативная библиотека TDLib не ответила за 6 сек")
+                    return@launch
+                }
                 client = tdl
 
-                // Будим нативное C++ ядро TDLib
+                _connectionStatus.value = "Настройка логирования и сети..."
                 runCatching { tdl.setLogVerbosityLevel(1) }
                 applyActiveProxy(tdl)
 
-                // Запускаем слушатель состояний авторизации
                 launch {
                     tdl.authorizationStateUpdates.collect { update ->
                         handleAuthState(tdl, update.authorizationState, dbDirectory)
                     }
                 }
 
-                // Явно запрашиваем текущее состояние авторизации, чтобы инициировать цепочку
                 val initialRes = tdl.getAuthorizationState()
                 val initialState = (initialRes as? TdlResult.Success)?.result
                 if (initialState != null) {
                     handleAuthState(tdl, initialState, dbDirectory)
                 }
             } catch (e: Throwable) {
-                _connectionStatus.value = "Сбой TDLib: ${e.message}"
-                RedFoxAuthManager.setAuthError("Сбой ядра TDLib: ${e.message}")
+                val errDetail = "${e::class.simpleName}: ${e.message}"
+                _connectionStatus.value = "Сбой ядра: $errDetail"
+                RedFoxAuthManager.setAuthError("Сбой TDLib: $errDetail")
             }
         }
     }
@@ -83,7 +90,7 @@ object RedFoxTdEngine {
     private suspend fun handleAuthState(tdl: TdlClient, state: AuthorizationState, dbDir: String) {
         when (state) {
             is AuthorizationStateWaitTdlibParameters -> {
-                _connectionStatus.value = "Передача параметров API (${RedFoxSecrets.API_ID})..."
+                _connectionStatus.value = "Передача API_ID (${RedFoxSecrets.API_ID})..."
                 val res = tdl.setTdlibParameters(
                     useTestDc = false,
                     databaseDirectory = dbDir,
@@ -168,7 +175,7 @@ object RedFoxTdEngine {
         scope.launch {
             val tdl = client
             if (tdl == null) {
-                RedFoxAuthManager.setAuthError("Ядро TDLib ещё не готово, подождите 2 секунды")
+                RedFoxAuthManager.setAuthError("Ядро TDLib не запущено: ${_connectionStatus.value}")
                 return@launch
             }
             _connectionStatus.value = "Отправка номера на серверы Telegram..."
@@ -212,16 +219,16 @@ object RedFoxTdEngine {
 
     fun sendPassword2FA(password: String) {
         scope.launch {
-            val res = client?.checkAuthenticationPassword(password = password)
-            if (res is TdlResult.Failure) {
-                RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message}")
-            }
-        }
-    }
 
-    fun logOut() {
-        scope.launch {
-            runCatching { client?.logOut() }
-        }
-    }
+val res = client?.checkAuthenticationPassword(password = password)
+if (res is TdlResult.Failure) {
+RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message}")
+}
+}
+}
+fun logOut() {
+scope.launch {
+runCatching { client?.logOut() }
+}
+}
 }
