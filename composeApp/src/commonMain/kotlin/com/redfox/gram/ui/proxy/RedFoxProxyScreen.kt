@@ -65,7 +65,7 @@ fun RedFoxProxyScreen(onBack: () -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = if (state.enabled) "Обход активен" else "Обход отключен",
+                                    text = if (state.enabled && state.nodes.isNotEmpty()) "Обход активен" else "Обход отключен",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -76,7 +76,7 @@ fun RedFoxProxyScreen(onBack: () -> Unit) {
                                 )
                             }
                             Android17Switch(
-                                checked = state.enabled,
+                                checked = state.enabled && state.nodes.isNotEmpty(),
                                 onCheckedChange = { RedFoxProxyManager.toggleEnabled(it) }
                             )
                         }

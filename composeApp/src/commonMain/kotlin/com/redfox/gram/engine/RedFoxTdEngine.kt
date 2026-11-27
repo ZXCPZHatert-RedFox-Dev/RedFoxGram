@@ -15,37 +15,31 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object RedFoxTdEngine {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: TdlClient? = null
     private var started = false
 
-    private val _connectionStatus = MutableStateFlow("Инициализация ядра TDLib...")
+    private val _connectionStatus = MutableStateFlow("Ожидание запуска...")
     val connectionStatus = _connectionStatus.asStateFlow()
 
     fun start(dbDirectory: String = "redfox_tdlib_db") {
         if (started) return
         started = true
+        _connectionStatus.value = "Запуск корутины TDLib..."
 
         scope.launch {
             try {
                 if (RedFoxSecrets.API_ID == 0 || RedFoxSecrets.API_HASH.isBlank()) {
-                    _connectionStatus.value = "Ошибка: не заданы API_ID / API_HASH!"
-                    RedFoxAuthManager.setAuthError("Ключи TELEGRAM_API_ID / API_HASH не переданы при сборке")
+                    _connectionStatus.value = "Ошибка: API_ID=${RedFoxSecrets.API_ID} (пусто)"
+                    RedFoxAuthManager.setAuthError("Ключи TELEGRAM_API_ID / API_HASH не заданы в сборке")
                     return@launch
                 }
 
-                _connectionStatus.value = "Загрузка нативной библиотеки TDLib..."
-                val tdl = withTimeoutOrNull(6000L) {
-                    TdlClient.create()
-                }
-                if (tdl == null) {
-                    _connectionStatus.value = "Таймаут загрузки нативного TDLib (.so)"
-                    RedFoxAuthManager.setAuthError("Нативная библиотека TDLib не ответила за 6 сек")
-                    return@launch
-                }
+                _connectionStatus.value = "Создание TdlClient (ARMv8)..."
+                val tdl = TdlClient.create()
                 client = tdl
 
-                _connectionStatus.value = "Настройка логирования и сети..."
+                _connectionStatus.value = "Настройка сети и прокси..."
                 runCatching { tdl.setLogVerbosityLevel(1) }
                 applyActiveProxy(tdl)
 
@@ -62,15 +56,15 @@ object RedFoxTdEngine {
                 }
             } catch (e: Throwable) {
                 val errDetail = "${e::class.simpleName}: ${e.message}"
-                _connectionStatus.value = "Сбой ядра: $errDetail"
-                RedFoxAuthManager.setAuthError("Сбой TDLib: $errDetail")
+                _connectionStatus.value = "Ошибка: $errDetail"
+                RedFoxAuthManager.setAuthError(errDetail)
             }
         }
     }
 
     private suspend fun applyActiveProxy(tdl: TdlClient) {
         val proxyState = RedFoxProxyManager.state.value
-        if (!proxyState.enabled) return
+        if (!proxyState.enabled || proxyState.nodes.isEmpty()) return
         val node = proxyState.nodes.find { it.id == proxyState.activeNodeId } ?: return
 
         val proxyType = when (node.protocol) {
@@ -90,7 +84,7 @@ object RedFoxTdEngine {
     private suspend fun handleAuthState(tdl: TdlClient, state: AuthorizationState, dbDir: String) {
         when (state) {
             is AuthorizationStateWaitTdlibParameters -> {
-                _connectionStatus.value = "Передача API_ID (${RedFoxSecrets.API_ID})..."
+                _connectionStatus.value = "Передача параметров API (${RedFoxSecrets.API_ID})..."
                 val res = tdl.setTdlibParameters(
                     useTestDc = false,
                     databaseDirectory = dbDir,
@@ -211,15 +205,14 @@ object RedFoxTdEngine {
     fun sendAuthCode(code: String) {
         scope.launch {
             val res = client?.checkAuthenticationCode(code = code)
-            if (res is TdlResult.Failure) {
-                RedFoxAuthManager.setAuthError("Неверный код: ${res.message}")
-            }
-        }
-    }
 
-    fun sendPassword2FA(password: String) {
-        scope.launch {
-
+if (res is TdlResult.Failure) {
+RedFoxAuthManager.setAuthError("Неверный код: ${res.message}")
+}
+}
+}
+fun sendPassword2FA(password: String) {
+scope.launch {
 val res = client?.checkAuthenticationPassword(password = password)
 if (res is TdlResult.Failure) {
 RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message}")
