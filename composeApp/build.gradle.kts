@@ -66,3 +66,16 @@ compose.desktop {
         }
     }
 }
+
+val generateRedFoxSecrets by tasks.registering {
+    val outDir = layout.buildDirectory.dir("generated/redfox/kotlin")
+    outputs.dir(outDir)
+    doLast {
+        val apiId = System.getenv("TELEGRAM_API_ID")?.toIntOrNull() ?: 0
+        val apiHash = System.getenv("TELEGRAM_API_HASH") ?: ""
+        val file = outDir.get().file("com/redfox/gram/config/RedFoxSecrets.kt").asFile
+        file.parentFile.mkdirs()
+        file.writeText("package com.redfox.gram.config\nobject RedFoxSecrets { const val API_ID = $apiId; const val API_HASH = \"$apiHash\" }\n")
+    }
+}
+kotlin.sourceSets.getByName("commonMain").kotlin.srcDir(generateRedFoxSecrets)
