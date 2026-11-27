@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URL
@@ -36,7 +37,7 @@ data class ProxyHubState(
     val autoSmartRotation: Boolean = true,
     val activeNodeId: String = "",
     val isCheckingPing: Boolean = false,
-    val statusNote: String = "Нажмите тумблер для авто-поиска живых MTProto-прокси",
+    val statusNote: String = "Вставьте ссылку tg://proxy или нажмите «Проверить пинг»",
     val nodes: List<ProxyNode> = emptyList()
 )
 
@@ -44,6 +45,44 @@ object RedFoxProxyManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _state = MutableStateFlow(ProxyHubState())
     val state: StateFlow<ProxyHubState> = _state.asStateFlow()
+    private val storageFile = File(System.getProperty("java.io.tmpdir"), "redfox_saved_proxies.txt")
+
+    init {
+        loadSavedNodes()
+    }
+
+    private fun loadSavedNodes() {
+        runCatching {
+            if (storageFile.exists()) {
+                val saved = storageFile.readLines().mapNotNull { line ->
+                    val parts = line.split("|")
+                    if (parts.size >= 4) {
+                        ProxyNode(
+                            id = parts[0],
+                            name = parts[1],
+                            host = parts[2],
+                            port = parts[3].toIntOrNull() ?: 443,
+                            secret = parts.getOrElse(4) { "" },
+                            protocol = if (parts.getOrElse(4) { "" }.isNotEmpty()) ProxyProtocol.MTPROTO else ProxyProtocol.SOCKS5,
+                            isBuiltIn = false
+                        )
+                    } else null
+                }
+                if (saved.isNotEmpty()) {
+                    _state.update { it.copy(nodes = saved, activeNodeId = saved.first().id) }
+                }
+            }
+        }
+    }
+
+    private fun saveCustomNodes(nodes: List<ProxyNode>) {
+        runCatching {
+            val lines = nodes.filter { !it.isBuiltIn }.map {
+                "${it.id}|${it.name}|${it.host}|${it.port}|${it.secret}"
+            }
+            storageFile.writeText(lines.joinToString("\n"))
+        }
+    }
 
     fun toggleEnabled(enabled: Boolean) {
         _state.update { it.copy(enabled = enabled) }
@@ -52,7 +91,14 @@ object RedFoxProxyManager {
             RedFoxTdEngine.syncProxyState(false, null)
             return
         }
-        fetchPublicMtprotoNodes()
+        val custom = _state.value.nodes.filter { !it.isBuiltIn }
+        if (custom.isNotEmpty()) {
+            val first = custom.first()
+            _state.update { it.copy(activeNodeId = first.id, statusNote = "Подключено: ${first.host}:${first.port}") }
+            RedFoxTdEngine.syncProxyState(true, first)
+        } else {
+            fetchPublicMtprotoNodes()
+        }
     }
 
     fun toggleSmartRotation(enabled: Boolean) {
@@ -75,90 +121,60 @@ object RedFoxProxyManager {
         runCatching {
             val start = System.currentTimeMillis()
             Socket().use { socket ->
-                socket.connect(InetSocketAddress(host, port), 2200)
+                socket.connect(InetSocketAddress(host, port), 2500)
             }
             (System.currentTimeMillis() - start).toInt().coerceAtLeast(1)
         }.getOrDefault(-1)
     }
 
     fun refreshAllPings() {
-        // Всегда подтягиваем свежий пул прокси + перепроверяем существующие
         fetchPublicMtprotoNodes()
     }
 
     fun fetchPublicMtprotoNodes() {
-        _state.update { it.copy(isCheckingPing = true, statusNote = "Скачивание свежих MTProto-прокси...") }
+        _state.update { it.copy(isCheckingPing = true, statusNote = "Поиск доступных MTProto-прокси...") }
         scope.launch {
             val candidates = mutableListOf<ProxyNode>()
             val sources = listOf(
                 "https://mtpro.xyz",
-                "https://githubusercontent.com",
                 "https://jsdelivr.net",
                 "https://jsdelivr.net",
-                "https://jsdelivr.net"
+                "https://githubusercontent.com"
             )
             for (src in sources) {
                 runCatching {
                     val conn = URL(src).openConnection().apply {
-                        connectTimeout = 4000
-                        readTimeout = 4000
-                        setRequestProperty("User-Agent", "Mozilla/5.0 (Android 17)")
+                        connectTimeout = 3500
+                        readTimeout = 3500
+                        setRequestProperty("User-Agent", "Mozilla/5.0")
                     }
                     val body = conn.getInputStream().bufferedReader().readText()
-
-                    // 1. Формат ссылок tg://proxy?server=...&port=...&secret=...
                     val linkRegex = Regex("""server=([a-zA-Z0-9.\-]+)&port=(\d+)&secret=([a-zA-Z0-9_\-=]+)""")
-                    linkRegex.findAll(body).take(30).forEach { m ->
+                    linkRegex.findAll(body).take(25).forEach { m ->
                         val (host, portStr, secret) = m.destructured
                         val port = portStr.toIntOrNull() ?: 443
                         if (candidates.none { it.host == host && it.port == port }) {
-                            candidates.add(
-                                ProxyNode(
-                                    id = "pub-${candidates.size + 1}",
-                                    name = "MTProto #${candidates.size + 1} ($host)",
-                                    host = host,
-                                    port = port,
-                                    secret = secret,
-                                    protocol = ProxyProtocol.MTPROTO
-                                )
-                            )
+                            candidates.add(ProxyNode("pub-${candidates.size + 1}", "MTProto #${candidates.size + 1} ($host)", host, port, secret, ProxyProtocol.MTPROTO))
                         }
                     }
-
-                    // 2. Формат JSON mtpro.xyz / hookzof ("host":"...","port":...,"secret":"...")
                     val jsonRegex = Regex(""""host"\s*:\s*"([^"]+)"\s*,\s*"port"\s*:\s*(\d+)\s*,\s*"secret"\s*:\s*"([^"]+)"""")
-                    jsonRegex.findAll(body).take(30).forEach { m ->
+                    jsonRegex.findAll(body).take(25).forEach { m ->
                         val (host, portStr, secret) = m.destructured
                         val port = portStr.toIntOrNull() ?: 443
                         if (candidates.none { it.host == host && it.port == port }) {
-                            candidates.add(
-                                ProxyNode(
-                                    id = "pub-${candidates.size + 1}",
-                                    name = "MTProto #${candidates.size + 1} ($host)",
-                                    host = host,
-                                    port = port,
-                                    secret = secret,
-                                    protocol = ProxyProtocol.MTPROTO
-                                )
-                            )
+                            candidates.add(ProxyNode("pub-${candidates.size + 1}", "MTProto #${candidates.size + 1} ($host)", host, port, secret, ProxyProtocol.MTPROTO))
                         }
                     }
                 }
-                if (candidates.size >= 20) break
+                if (candidates.size >= 15) break
             }
 
-            // Сохраняем пользовательские добавленные ссылки + свежие кандидаты
             val customNodes = _state.value.nodes.filter { !it.isBuiltIn }
             val allToTest = (customNodes + candidates).distinctBy { "${it.host}:${it.port}" }
 
-            _state.update { it.copy(statusNote = "Проверка пинга ${allToTest.size} серверов...") }
-
             val checked = allToTest.map { node ->
-                val tcpMs = measureTcpPing(node.host, node.port)
-                val finalMs = if (tcpMs > 0) {
-                    val tdMs = RedFoxTdEngine.testProxyWithTdlib(node)
-                    if (tdMs > 0) tdMs else tcpMs
-                } else -1
+                val tdMs = RedFoxTdEngine.testProxyWithTdlib(node)
+                val finalMs = if (tdMs > 0) tdMs else measureTcpPing(node.host, node.port)
                 node.copy(pingMs = finalMs)
             }
 
@@ -169,15 +185,13 @@ object RedFoxProxyManager {
             _state.update { current ->
                 current.copy(
                     nodes = sortedAll,
-                    activeNodeId = best?.id ?: "",
+                    activeNodeId = best?.id ?: current.activeNodeId,
                     enabled = best != null,
                     isCheckingPing = false,
                     statusNote = if (best != null) {
-                        "Подключено: ${best.host} (${best.pingMs} мс)"
-                    } else if (sortedAll.isEmpty()) {
-                        "Нет доступа к зеркалам — вставьте ссылку tg://proxy вручную"
+                        "Активен: ${best.host} (${best.pingMs} мс)"
                     } else {
-                        "Живых серверов не найдено (0/${sortedAll.size}) — вставьте свой tg://proxy"
+                        "Авто-списки заблокированы провайдером — вставьте ссылку tg://proxy ниже"
                     }
                 )
             }
@@ -202,7 +216,7 @@ object RedFoxProxyManager {
 
         val newNode = ProxyNode(
             id = "custom-${Random.nextInt(1000, 9999)}",
-            name = "Свой узел ($host)",
+            name = "Свой прокси ($host)",
             host = host,
             port = port,
             secret = secret,
@@ -211,26 +225,28 @@ object RedFoxProxyManager {
             isBuiltIn = false
         )
 
+        val updatedList = listOf(newNode) + _state.value.nodes.filter { !(it.host == host && it.port == port) }
+        saveCustomNodes(updatedList)
+
         _state.update { current ->
             current.copy(
-                nodes = listOf(newNode) + current.nodes,
+                nodes = updatedList,
                 activeNodeId = newNode.id,
                 enabled = true,
-                statusNote = "Проверка своего узла $host:$port..."
+                statusNote = "Подключение к $host:$port..."
             )
         }
         scope.launch {
             val ms = RedFoxTdEngine.testProxyWithTdlib(newNode).let { if (it > 0) it else measureTcpPing(host, port) }
             _state.update { current ->
                 current.copy(
-                    nodes = current.nodes.map { if (it.id == newNode.id) it.copy(pingMs = ms) else it },
-                    statusNote = if (ms > 0) "Подключено: $host ($ms мс)" else "Узел $host не отвечает (-1 мс)"
-                )
-            }
-            if (ms > 0) {
-                RedFoxTdEngine.syncProxyState(true, newNode.copy(pingMs = ms))
-            }
-        }
-        return true
-    }
+
+nodes = current.nodes.map { if (it.id == newNode.id) it.copy(pingMs = ms) else it },
+statusNote = if (ms > 0) "Подключено: $host ($ms мс)" else "Узел $host добавлен (проверьте связь)"
+)
+}
+RedFoxTdEngine.syncProxyState(true, newNode.copy(pingMs = ms))
+}
+return true
+}
 }
