@@ -24,6 +24,7 @@ kotlin {
                 implementation(compose.foundation)
                 implementation(compose.material3)
                 implementation(compose.ui)
+                implementation("dev.g000sha256:tdl-coroutines:1.5.0")
             }
         }
         val androidMain by getting {
