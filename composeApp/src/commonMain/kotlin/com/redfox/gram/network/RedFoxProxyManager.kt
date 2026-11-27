@@ -47,10 +47,8 @@ object RedFoxProxyManager {
 
     // Резервный встроенный пул на случай, если GitHub/CDN заблокированы провайдером
     private val fallbackPublicNodes = listOf(
-        ProxyNode("fb-1", "EU Frankfurt #1 (TLS)", "mtproto.info", 443, "ee00000000000000000000000000000000676f6f676c652e636f6d", ProxyProtocol.MTPROTO),
-        ProxyNode("fb-2", "RU/EU Bridge #2 (TLS)", "proxy.digitalresistance.dog", 443, "ddd41d8cd98f00b204e9800998ecf8427e", ProxyProtocol.MTPROTO),
-        ProxyNode("fb-3", "NL Amsterdam #3 (TLS)", "nl.tgproxy.today", 443, "ee1603010200010001fc030386e24c3add636c6f7564666c6172652e636f6d", ProxyProtocol.MTPROTO),
-        ProxyNode("fb-4", "FI Helsinki #4 (TLS)", "fi.tgproxy.today", 443, "ee1603010200010001fc030386e24c3add636c6f7564666c6172652e636f6d", ProxyProtocol.MTPROTO)
+        ProxyNode("fb-1", "RU Bridge #1 (Fake-TLS)", "msk.myrka.digital", 443, "ee29c42fdca322d73b6105276b5ef8d19e6c6f6d2e676f6f676c652e636f6d", ProxyProtocol.MTPROTO),
+        ProxyNode("fb-2", "Digital Resistance #2", "proxy.digitalresistance.dog", 443, "ddd41d8cd98f00b204e9800998ecf8427e", ProxyProtocol.MTPROTO)
     )
 
     fun toggleEnabled(enabled: Boolean) {
