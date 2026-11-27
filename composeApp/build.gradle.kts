@@ -44,11 +44,21 @@ android {
     namespace = "com.redfox.gram"
     compileSdk = 35
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
+    
+    signingConfigs {
+        create("redfoxUnified") {
+            storeFile = file("${rootProject.projectDir}/redfox_unified.jks")
+            storePassword = "redfox_m3e_stable_key"
+            keyAlias = "redfox_key"
+            keyPassword = "redfox_m3e_stable_key"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.redfox.gram"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1) + 100
         versionName = "0.2-M3E"
     }
     compileOptions {

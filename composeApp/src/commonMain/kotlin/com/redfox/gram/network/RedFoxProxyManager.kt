@@ -45,6 +45,14 @@ object RedFoxProxyManager {
     private val _state = MutableStateFlow(ProxyHubState())
     val state: StateFlow<ProxyHubState> = _state.asStateFlow()
 
+    // Резервный встроенный пул на случай, если GitHub/CDN заблокированы провайдером
+    private val fallbackPublicNodes = listOf(
+        ProxyNode("fb-1", "EU Frankfurt #1 (TLS)", "mtproto.info", 443, "ee00000000000000000000000000000000676f6f676c652e636f6d", ProxyProtocol.MTPROTO),
+        ProxyNode("fb-2", "RU/EU Bridge #2 (TLS)", "proxy.digitalresistance.dog", 443, "ddd41d8cd98f00b204e9800998ecf8427e", ProxyProtocol.MTPROTO),
+        ProxyNode("fb-3", "NL Amsterdam #3 (TLS)", "nl.tgproxy.today", 443, "ee1603010200010001fc030386e24c3add636c6f7564666c6172652e636f6d", ProxyProtocol.MTPROTO),
+        ProxyNode("fb-4", "FI Helsinki #4 (TLS)", "fi.tgproxy.today", 443, "ee1603010200010001fc030386e24c3add636c6f7564666c6172652e636f6d", ProxyProtocol.MTPROTO)
+    )
+
     fun toggleEnabled(enabled: Boolean) {
         _state.update { it.copy(enabled = enabled) }
         if (!enabled) {
@@ -117,7 +125,7 @@ object RedFoxProxyManager {
                     statusNote = if (active != null && active.pingMs > 0) {
                         "Живых: ${alive.size}/${finalNodes.size} • ${active.host} (${active.pingMs} мс)"
                     } else {
-                        "Живых серверов: ${alive.size} из ${finalNodes.size}"
+                        "Проверено узлов: ${finalNodes.size} • вставьте свой tg://proxy для лучшей скорости"
                     }
                 )
             }
@@ -134,20 +142,20 @@ object RedFoxProxyManager {
             val sources = listOf(
                 "https://jsdelivr.net",
                 "https://jsdelivr.net",
-                "https://githubusercontent.com",
+                "https://jsdelivr.net",
                 "https://githubusercontent.com"
             )
             for (src in sources) {
                 runCatching {
                     val conn = URL(src).openConnection().apply {
-                        connectTimeout = 4000
-                        readTimeout = 4000
+                        connectTimeout = 3500
+                        readTimeout = 3500
                         setRequestProperty("User-Agent", "Mozilla/5.0")
                     }
                     val body = conn.getInputStream().bufferedReader().readText()
 
                     val linkRegex = Regex("""server=([a-zA-Z0-9.\-]+)&port=(\d+)&secret=([a-zA-Z0-9_\-=]+)""")
-                    linkRegex.findAll(body).take(25).forEach { m ->
+                    linkRegex.findAll(body).take(20).forEach { m ->
                         val (host, portStr, secret) = m.destructured
                         val port = portStr.toIntOrNull() ?: 443
                         if (candidates.none { it.host == host && it.port == port }) {
@@ -165,70 +173,67 @@ object RedFoxProxyManager {
                     }
 
                     val jsonRegex = Regex(""""host"\s*:\s*"([^"]+)"\s*,\s*"port"\s*:\s*(\d+)\s*,\s*"secret"\s*:\s*"([^"]+)"""")
-                    jsonRegex.findAll(body).take(25).forEach { m ->
+                    jsonRegex.findAll(body).take(20).forEach { m ->
                         val (host, portStr, secret) = m.destructured
                         val port = portStr.toIntOrNull() ?: 443
                         if (candidates.none { it.host == host && it.port == port }) {
                             candidates.add(
                                 ProxyNode(
-                                    id = "pub-${candidates.size + 1}",
-                                    name = "MTProto #${candidates.size + 1} ($host)",
-                                    host = host,
-                                    port = port,
-                                    secret = secret,
-                                    protocol = ProxyProtocol.MTPROTO
-                                )
-                            )
-                        }
-                    }
-                }
-                if (candidates.size >= 15) break
-            }
 
-            val checked = candidates.map { node ->
-                node.copy(pingMs = measureTcpPing(node.host, node.port))
-            }
-            val alive = checked.filter { it.pingMs > 0 }.sortedBy { it.pingMs }
-            val resultList = if (alive.isNotEmpty()) alive else checked
-
-            _state.update { current ->
-                val merged = (resultList + current.nodes).distinctBy { "${it.host}:${it.port}" }
-                val first = merged.firstOrNull()
-                current.copy(
-                    nodes = merged,
-                    activeNodeId = first?.id ?: "",
-                    enabled = merged.isNotEmpty(),
-                    isCheckingPing = false,
-                    statusNote = if (first != null) {
-                        "Активен: ${first.host} (${if (first.pingMs > 0) "${first.pingMs} мс" else "проверка"})"
-                    } else {
-                        "Серверы не найдены — вставьте ссылку tg://proxy"
-                    }
-                )
-            }
-            val active = _state.value.nodes.find { it.id == _state.value.activeNodeId }
-            RedFoxTdEngine.syncProxyState(_state.value.enabled, active)
-        }
-    }
-
-    fun addFromLink(rawLink: String): Boolean {
-        val clean = rawLink.trim()
-        if (!clean.contains("server=") || !clean.contains("port=")) return false
-
-        val queryPart = clean.substringAfter("?", "")
-        val params = queryPart.split("&").mapNotNull { pair ->
-            val idx = pair.indexOf('=')
-            if (idx > 0) pair.substring(0, idx) to pair.substring(idx + 1) else null
-        }.toMap()
-
-        val host = params["server"] ?: return false
-        val port = params["port"]?.toIntOrNull() ?: return false
-        val secret = params["secret"] ?: ""
-        val protocol = if (secret.isNotEmpty()) ProxyProtocol.MTPROTO else ProxyProtocol.SOCKS5
-
-        val newNode = ProxyNode(
-            id = "custom-${Random.nextInt(1000, 9999)}",
-
+id = "pub-${candidates.size + 1}",
+name = "MTProto #${candidates.size + 1} ($host)",
+host = host,
+port = port,
+secret = secret,
+protocol = ProxyProtocol.MTPROTO
+)
+)
+}
+}
+}
+if (candidates.size >= 10) break
+}
+if (candidates.isEmpty()) {
+candidates.addAll(fallbackPublicNodes)
+}
+val checked = candidates.map { node ->
+node.copy(pingMs = measureTcpPing(node.host, node.port))
+}
+val alive = checked.filter { it.pingMs > 0 }.sortedBy { it.pingMs }
+val resultList = if (alive.isNotEmpty()) alive else checked
+_state.update { current ->
+val merged = (resultList + current.nodes).distinctBy { "${it.host}:${it.port}" }
+val first = merged.firstOrNull()
+current.copy(
+nodes = merged,
+activeNodeId = first?.id ?: "",
+enabled = merged.isNotEmpty(),
+isCheckingPing = false,
+statusNote = if (first != null && first.pingMs > 0) {
+"Активен: ${first.host} (${first.pingMs} мс)"
+} else {
+"Загружено ${merged.size} узлов • добавьте свой tg://proxy для макс. скорости"
+}
+)
+}
+val active = _state.value.nodes.find { it.id == _state.value.activeNodeId }
+RedFoxTdEngine.syncProxyState(_state.value.enabled, active)
+}
+}
+fun addFromLink(rawLink: String): Boolean {
+val clean = rawLink.trim()
+if (!clean.contains("server=") || !clean.contains("port=")) return false
+val queryPart = clean.substringAfter("?", "")
+val params = queryPart.split("&").mapNotNull { pair ->
+val idx = pair.indexOf('=')
+if (idx > 0) pair.substring(0, idx) to pair.substring(idx + 1) else null
+}.toMap()
+val host = params["server"] ?: return false
+val port = params["port"]?.toIntOrNull() ?: return false
+val secret = params["secret"] ?: ""
+val protocol = if (secret.isNotEmpty()) ProxyProtocol.MTPROTO else ProxyProtocol.SOCKS5
+val newNode = ProxyNode(
+id = "custom-${Random.nextInt(1000, 9999)}",
 name = "Свой узел ($host)",
 host = host,
 port = port,
