@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.redfox.gram.config.ClientPreset
+import com.redfox.gram.ui.components.Android17Switch
 import com.redfox.gram.config.RedFoxConfig
 import com.redfox.gram.config.RedFoxSettingsState
 
@@ -253,6 +254,6 @@ style = MaterialTheme.typography.bodySmall,
 color = MaterialTheme.colorScheme.onSurfaceVariant
 )
 }
-Switch(checked = checked, onCheckedChange = onCheckedChange)
+Android17Switch(checked = checked, onCheckedChange = onCheckedChange)
 }
 }
