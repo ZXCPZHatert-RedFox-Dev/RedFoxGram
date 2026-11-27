@@ -114,10 +114,10 @@ object RedFoxTdEngine {
     private suspend fun loadRealChats(tdl: TdlClient) {
         runCatching {
             val chatsRes = tdl.getChats(chatList = ChatListMain(), limit = 40)
-            val ids: LongArray = chatsRes.getOrNull()?.chatIds ?: return
+            val ids: LongArray = (chatsRes as? TdlResult.Success)?.result?.chatIds ?: return
             val previews = mutableListOf<ChatPreview>()
             for (chatId in ids) {
-                val chat: Chat = tdl.getChat(chatId = chatId).getOrNull() ?: continue
+                val chat: Chat = (tdl.getChat(chatId = chatId) as? TdlResult.Success)?.result ?: continue
                 val lastText = when (val content = chat.lastMessage?.content) {
                     is MessageText -> content.text.text
                     is MessagePhoto -> "Фотография"
