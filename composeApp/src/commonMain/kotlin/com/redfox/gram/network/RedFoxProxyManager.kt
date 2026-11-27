@@ -23,11 +23,12 @@ data class ProxyNode(
 )
 
 data class ProxyHubState(
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val autoSmartRotation: Boolean = true,
-    val activeNodeId: String = "nl-ams-1",
+    val activeNodeId: String = "",
     val isCheckingPing: Boolean = false,
-    val nodes: List<ProxyNode> = listOf(
+    val nodes: List<ProxyNode> = emptyList(), // Добавляйте свои tg://proxy
+    val presetExamples: List<ProxyNode> = listOf(
         ProxyNode("nl-ams-1", "Amsterdam M3E #1 (Fake-TLS)", "ams1.mtproxy.redfox.dev", 443, "dd00000000000000000000000000000001", ProxyProtocol.MTPROTO, 48),
         ProxyNode("de-fra-2", "Frankfurt Core #2 (Fake-TLS)", "fra2.mtproxy.redfox.dev", 443, "dd00000000000000000000000000000002", ProxyProtocol.MTPROTO, 54),
         ProxyNode("fi-hel-3", "Helsinki Ultra #3 (Fake-TLS)", "hel3.mtproxy.redfox.dev", 8443, "dd00000000000000000000000000000003", ProxyProtocol.MTPROTO, 39),

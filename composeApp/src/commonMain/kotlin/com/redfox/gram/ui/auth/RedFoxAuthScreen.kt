@@ -14,12 +14,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.redfox.gram.auth.AuthStep
 import com.redfox.gram.auth.RedFoxAuthManager
+import com.redfox.gram.engine.RedFoxTdEngine
 import com.redfox.gram.network.RedFoxProxyManager
 
 @Composable
 fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
     val authState by RedFoxAuthManager.state.collectAsState()
     val proxyState by RedFoxProxyManager.state.collectAsState()
+    val tdStatus by RedFoxTdEngine.connectionStatus.collectAsState()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -33,7 +35,7 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                 .padding(24.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Верхняя плашка статуса встроенного обхода RedFox Shield
+            // Верхняя плашка статуса соединения и TDLib
             Card(
                 onClick = onOpenProxy,
                 shape = RoundedCornerShape(20.dp),
@@ -41,24 +43,31 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 )
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    val activeNode = proxyState.nodes.find { it.id == proxyState.activeNodeId }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val activeNode = proxyState.nodes.find { it.id == proxyState.activeNodeId }
+                        Text(
+                            text = if (proxyState.enabled && activeNode != null) {
+                                "Прокси: ${activeNode.host}:${activeNode.port}"
+                            } else {
+                                "Соединение: Прямое (TDLib MTProto)"
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text("Прокси", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        text = if (proxyState.enabled) {
-                            "RedFox Shield: ${activeNode?.name ?: "MTProxy"} (${activeNode?.pingMs ?: 42} мс)"
-                        } else {
-                            "RedFox Shield: прямое соединение"
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f)
+                        text = "Статус ядра: $tdStatus",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
-                    Text("Настроить", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
 
@@ -79,7 +88,7 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                             AuthStep.PHONE -> {
                                 Text("Вход в RedFoxGram", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 Text(
-                                    "Введите номер телефона аккаунта Telegram. Соединение защищено MTProto Fake-TLS.",
+                                    "Введите номер телефона. Код придёт в служебные уведомления Telegram на ваших устройствах.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -93,17 +102,24 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                                 )
                                 Button(
                                     onClick = { RedFoxAuthManager.submitPhone() },
+                                    enabled = !authState.isLoading,
                                     shape = RoundedCornerShape(18.dp),
                                     modifier = Modifier.fillMaxWidth().height(52.dp)
                                 ) {
-                                    Text("Получить код ->", fontWeight = FontWeight.Bold)
+                                    Text(if (authState.isLoading) "Отправка запроса..." else "Получить код ->", fontWeight = FontWeight.Bold)
+                                }
+                                TextButton(
+                                    onClick = { RedFoxAuthManager.completeLogin(skip2FA = true) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Быстрый предпросмотр UI (без входа)")
                                 }
                             }
 
                             AuthStep.CODE -> {
                                 Text("Код подтверждения", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 Text(
-                                    "Мы отправили 5-значный код в официальное приложение Telegram на номер ${authState.phoneNumber}.",
+                                    "${authState.deliveryHint} (${authState.phoneNumber}).",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -117,17 +133,29 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                                 )
                                 Button(
                                     onClick = { RedFoxAuthManager.verifyCode() },
+                                    enabled = !authState.isLoading,
                                     shape = RoundedCornerShape(18.dp),
                                     modifier = Modifier.fillMaxWidth().height(52.dp)
                                 ) {
                                     Text("Подтвердить код", fontWeight = FontWeight.Bold)
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    TextButton(onClick = { RedFoxAuthManager.moveToStep(AuthStep.PHONE) }) {
+                                        Text("<- Изменить номер")
+                                    }
+                                    TextButton(onClick = { RedFoxTdEngine.resendCode() }) {
+                                        Text("Повторить код")
+                                    }
                                 }
                             }
 
                             AuthStep.PASSWORD_2FA -> {
                                 Text("Облачный пароль (2FA)", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 Text(
-                                    "Если на аккаунте включена двухэтапная аутентификация, введите пароль.",
+                                    "Введите ваш двухэтапный пароль от аккаунта Telegram.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -137,22 +165,17 @@ fun RedFoxAuthScreen(onOpenProxy: () -> Unit = {}) {
                                     label = { Text("Пароль 2FA") },
                                     visualTransformation = PasswordVisualTransformation(),
                                     singleLine = true,
-
-shape = RoundedCornerShape(18.dp),
-modifier = Modifier.fillMaxWidth()
-)
+                                    shape = RoundedCornerShape(18.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+Используйте код с осторожностью.
 Button(
 onClick = { RedFoxAuthManager.completeLogin(skip2FA = false) },
+enabled = !authState.isLoading,
 shape = RoundedCornerShape(18.dp),
 modifier = Modifier.fillMaxWidth().height(52.dp)
 ) {
 Text("Войти в чаты", fontWeight = FontWeight.Bold)
-}
-TextButton(
-onClick = { RedFoxAuthManager.completeLogin(skip2FA = true) },
-modifier = Modifier.fillMaxWidth()
-) {
-Text("У меня нет облачного пароля (Пропустить)")
 }
 }
 AuthStep.AUTHORIZED -> {}
