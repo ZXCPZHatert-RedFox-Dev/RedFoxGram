@@ -47,6 +47,7 @@ object RedFoxTdEngine {
     fun start(dbDirectory: String = "redfox_tdlib_db") {
         if (started) return
         started = true
+        RedFoxProxyManager.bindStorageDirectory(dbDirectory)
         _connectionStatus.value = "Запуск ядра TDLib..."
 
         scope.launch {
@@ -60,6 +61,16 @@ object RedFoxTdEngine {
                 val tdl = TdlClient.create()
                 client = tdl
                 runCatching { tdl.setLogVerbosityLevel(1) }
+
+                // 0. Синхронизация реальных папок аккаунта Telegram
+                launch {
+                    tdl.chatFoldersUpdates.collect { update ->
+                        val synced = update.chatFolders.map { info ->
+                            TelegramFolderTab(id = info.id, title = info.name.text.text)
+                        }
+                        _telegramFolders.value = synced
+                    }
+                }
 
                 // 1. Слушатель авторизации
                 launch {
@@ -396,6 +407,44 @@ RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message
                     }
                 }
             }
+        }
+    }
+
+    
+    data class TelegramFolderTab(
+        val id: Int,
+        val title: String
+    )
+
+    private val _telegramFolders = MutableStateFlow<List<TelegramFolderTab>>(emptyList())
+    val telegramFolders = _telegramFolders.asStateFlow()
+
+    private val _folderChats = MutableStateFlow<List<ChatPreview>>(emptyList())
+    val folderChats = _folderChats.asStateFlow()
+
+    fun selectTelegramFolder(folderId: Int) {
+        scope.launch {
+            val tdl = client ?: return@launch
+            _folderChats.value = emptyList()
+            val chatsRes = tdl.getChats(chatList = ChatListFolder(chatFolderId = folderId), limit = 50)
+            val ids = (chatsRes as? TdlResult.Success)?.result?.chatIds ?: return@launch
+            val list = mutableListOf<ChatPreview>()
+            for (cid in ids) {
+                val chat = (tdl.getChat(chatId = cid) as? TdlResult.Success)?.result ?: continue
+                val lastMsg = chat.lastMessage
+                val lastText = if (lastMsg != null) extractContentText(lastMsg.content) else "Нет сообщений"
+                val isChannel = (chat.type as? ChatTypeSupergroup)?.isChannel == true
+                list.add(
+                    ChatPreview(
+                        id = chat.id,
+                        title = chat.title,
+                        lastMessage = lastText,
+                        time = if (isChannel) "Канал" else "Онлайн",
+                        unreadCount = chat.unreadCount
+                    )
+                )
+            }
+            _folderChats.value = list
         }
     }
 

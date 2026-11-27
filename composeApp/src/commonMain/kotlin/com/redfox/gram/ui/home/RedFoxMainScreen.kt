@@ -45,18 +45,14 @@ data class ChatPreview(
     val translatedTag: String? = null
 )
 
-private enum class HomeFolderTab(val title: String) {
-    ALL("Все"),
-    PERSONAL("Личные"),
-    CHANNEL_FEED("Лента каналов")
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedFoxMainScreen() {
     val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
     val realChats by RedFoxBridge.liveChats.collectAsState()
     val channelPosts by RedFoxTdEngine.channelFeedPosts.collectAsState()
+    val syncedFolders by RedFoxTdEngine.telegramFolders.collectAsState()
+    val activeFolderChats by RedFoxTdEngine.folderChats.collectAsState()
     val proxyState by RedFoxProxyManager.state.collectAsState()
 
     var showTweaks by remember { mutableStateOf(false) }
@@ -65,7 +61,9 @@ fun RedFoxMainScreen() {
     var openedChat by remember { mutableStateOf<ChatPreview?>(null) }
     var isPlaying by remember { mutableStateOf(true) }
     var avatarStyle by remember { mutableStateOf(ExpressiveAvatarStyle.FLOWER_12) }
-    var activeTab by remember { mutableStateOf(HomeFolderTab.ALL) }
+
+    // -1 = Все чаты, -2 = Лента каналов, > 0 = реальный folderId из аккаунта Telegram
+    var selectedTabId by remember { mutableStateOf(-1) }
 
     LaunchedEffect(Unit) {
         RedFoxTdEngine.refreshChatsNow()
@@ -102,7 +100,7 @@ fun RedFoxMainScreen() {
             ChatPreview(
                 id = 1,
                 title = "Загрузка реальных чатов TDLib...",
-                lastMessage = "Нажмите кнопку обновления или подождите пару секунд",
+                lastMessage = "Нажмите кнопку ↻ или подождите пару секунд",
                 time = "Сейчас",
                 unreadCount = 1
             )
@@ -110,10 +108,10 @@ fun RedFoxMainScreen() {
     }
 
     val baseChats = if (realChats.isNotEmpty()) realChats else fallbackDemoChats
-    val filteredChats = when (activeTab) {
-        HomeFolderTab.ALL -> baseChats
-        HomeFolderTab.PERSONAL -> baseChats.filter { it.time != "Канал" }
-        HomeFolderTab.CHANNEL_FEED -> emptyList()
+    val displayedChats = when {
+        selectedTabId == -1 -> baseChats
+        selectedTabId > 0 -> activeFolderChats
+        else -> emptyList()
     }
 
     Scaffold(
@@ -142,97 +140,112 @@ fun RedFoxMainScreen() {
                                 color = MaterialTheme.colorScheme.secondaryContainer,
                                 modifier = Modifier.clickable {
                                     val allStyles = ExpressiveAvatarStyle.entries
-                                    avatarStyle = allStyles[(avatarStyle.ordinal + 1) % allStyles.size]
-                                }
-                            ) {
-                                Text(
-                                    text = avatarStyle.label,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        TextButton(onClick = { RedFoxTdEngine.refreshChatsNow() }) {
-                            Text("↻", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HomeFolderTab.entries.forEach { tab ->
-                        val selected = activeTab == tab
-                        FilterChip(
-                            selected = selected,
-                            onClick = { activeTab = tab },
-                            shape = CircleShape,
-                            label = {
-                                Text(
-                                    text = if (tab == HomeFolderTab.CHANNEL_FEED && channelPosts.isNotEmpty()) {
-                                        "${tab.title} (${channelPosts.size})"
-                                    } else {
-                                        tab.title
-                                    },
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        )
-                    }
-                }
-
-                if (settings.liveLrcLyricsBar) {
-                    LiveLrcMiniBar(
-                        trackTitle = "Midnight City (M3E Remix)",
-                        artist = "RedFox Audio",
-                        currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
-                        isPlaying = isPlaying,
-                        onTogglePlay = { isPlaying = !isPlaying },
-                        onOpenFullPlayer = { showFullPlayer = true }
-                    )
-                }
-            }
-        },
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shadowElevation = 6.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        FilledTonalButton(
-                            onClick = {
-                                RedFoxConfig.update { current: RedFoxSettingsState ->
-                                    current.copy(ghostReadMessages = !current.ghostReadMessages)
-                                }
-                            },
-                            shape = CircleShape
-                        ) {
-                            Text(if (settings.ghostReadMessages) "Призрак: ВКЛ" else "Призрак: ВЫКЛ")
-                        }
-                        Button(
-                            onClick = { showTweaks = true },
-                            shape = CircleShape
-                        ) {
-
+avatarStyle = allStyles[(avatarStyle.ordinal + 1) % allStyles.size]
+}
+) {
+Text(
+text = avatarStyle.label,
+modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+style = MaterialTheme.typography.labelSmall,
+fontWeight = FontWeight.Bold,
+color = MaterialTheme.colorScheme.onSecondaryContainer
+)
+}
+}
+},
+actions = {
+TextButton(onClick = { RedFoxTdEngine.refreshChatsNow() }) {
+Text("↻", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+}
+}
+)
+// Синхронизированные папки из вашего аккаунта Telegram + Лента каналов (Hortay)
+Row(
+modifier = Modifier
+.fillMaxWidth()
+.horizontalScroll(rememberScrollState())
+.padding(horizontal = 14.dp, vertical = 6.dp),
+horizontalArrangement = Arrangement.spacedBy(8.dp)
+) {
+FilterChip(
+selected = selectedTabId == -1,
+onClick = { selectedTabId = -1 },
+shape = CircleShape,
+label = { Text("Все", fontWeight = if (selectedTabId == -1) FontWeight.Bold else FontWeight.Normal) }
+)
+FilterChip(
+selected = selectedTabId == -2,
+onClick = { selectedTabId = -2 },
+shape = CircleShape,
+label = {
+Text(
+text = if (channelPosts.isNotEmpty()) "Лента каналов (${channelPosts.size})" else "Лента каналов",
+fontWeight = if (selectedTabId == -2) FontWeight.Bold else FontWeight.Normal
+)
+}
+)
+syncedFolders.forEach { folder ->
+val selected = selectedTabId == folder.id
+FilterChip(
+selected = selected,
+onClick = {
+selectedTabId = folder.id
+RedFoxTdEngine.selectTelegramFolder(folder.id)
+},
+shape = CircleShape,
+label = {
+Text(
+text = folder.title,
+fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+)
+}
+)
+}
+}
+if (settings.liveLrcLyricsBar) {
+LiveLrcMiniBar(
+trackTitle = "Midnight City (M3E Remix)",
+artist = "RedFox Audio",
+currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
+isPlaying = isPlaying,
+onTogglePlay = { isPlaying = !isPlaying },
+onOpenFullPlayer = { showFullPlayer = true }
+)
+}
+}
+},
+bottomBar = {
+Box(
+modifier = Modifier
+.fillMaxWidth()
+.padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
+contentAlignment = Alignment.Center
+) {
+Surface(
+shape = CircleShape,
+color = MaterialTheme.colorScheme.surfaceContainerHighest,
+shadowElevation = 6.dp
+) {
+Row(
+modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+horizontalArrangement = Arrangement.spacedBy(8.dp),
+verticalAlignment = Alignment.CenterVertically
+) {
+FilledTonalButton(
+onClick = {
+RedFoxConfig.update { current: RedFoxSettingsState ->
+current.copy(ghostReadMessages = !current.ghostReadMessages)
+}
+},
+shape = CircleShape
+) {
+Text(if (settings.ghostReadMessages) "Призрак: ВКЛ" else "Призрак: ВЫКЛ")
+}
+Button(
+onClick = { showTweaks = true },
+shape = CircleShape
+) {
 Text("All-in-One M3E")
 }
 }
@@ -247,7 +260,7 @@ modifier = Modifier
 .padding(horizontal = 14.dp),
 verticalArrangement = Arrangement.spacedBy(10.dp)
 ) {
-if (activeTab == HomeFolderTab.CHANNEL_FEED) {
+if (selectedTabId == -2) {
 if (channelPosts.isEmpty()) {
 item {
 Surface(
@@ -285,8 +298,14 @@ style = MaterialTheme.typography.bodyMedium
 }
 }
 }
+} else if (selectedTabId > 0 && displayedChats.isEmpty()) {
+item {
+Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+CircularProgressIndicator()
+}
+}
 } else {
-items(filteredChats, key = { it.id }) { chat ->
+items(displayedChats, key = { it.id }) { chat ->
 ExpressiveChatCard(
 chat = chat,
 avatarStyle = avatarStyle,

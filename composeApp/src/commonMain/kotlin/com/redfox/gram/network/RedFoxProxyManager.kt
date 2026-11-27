@@ -47,10 +47,24 @@ object RedFoxProxyManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _state = MutableStateFlow(ProxyHubState())
     val state: StateFlow<ProxyHubState> = _state.asStateFlow()
-    private val storageFile = File(System.getProperty("java.io.tmpdir"), "redfox_saved_proxies.txt")
+    private var storageFile = File("redfox_saved_proxies.txt")
 
     init {
         loadSavedNodes()
+    }
+
+        fun bindStorageDirectory(dbDir: String) {
+        runCatching {
+            val dir = File(dbDir)
+            if (!dir.exists()) dir.mkdirs()
+            storageFile = File(dir, "saved_proxies.txt")
+            loadSavedNodes()
+            val best = _state.value.nodes.firstOrNull()
+            if (best != null) {
+                _state.update { it.copy(enabled = true, activeNodeId = best.id, statusNote = "Авто-старт: ${best.host}:${best.port}") }
+                RedFoxTdEngine.syncProxyState(true, best)
+            }
+        }
     }
 
     private fun loadSavedNodes() {
