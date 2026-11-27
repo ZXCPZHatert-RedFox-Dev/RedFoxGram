@@ -1,5 +1,4 @@
 package com.redfox.gram.ui.home
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -13,12 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,174 +21,194 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.redfox.gram.config.RedFoxConfig
 import com.redfox.gram.config.RedFoxSettingsState
+import com.redfox.gram.ui.chat.RedFoxChatScreen
 import com.redfox.gram.ui.player.LiveLrcMiniBar
+import com.redfox.gram.ui.player.RedFoxFullPlayerScreen
 import com.redfox.gram.ui.settings.RedFoxTweaksScreen
-
 data class ChatPreview(
-    val id: Long,
-    val title: String,
-    val lastMessage: String,
-    val time: String,
-    val unreadCount: Int = 0,
-    val isDeletedSaved: Boolean = false,
-    val translatedTag: String? = null
+val id: Long,
+val title: String,
+val lastMessage: String,
+val time: String,
+val unreadCount: Int = 0,
+val isDeletedSaved: Boolean = false,
+val translatedTag: String? = null
 )
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedFoxMainScreen() {
-    val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
-    var showTweaks by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(true) }
-
-    if (showTweaks) {
-        RedFoxTweaksScreen(onBack = { showTweaks = false })
-        return
-    }
-
-    val demoChats = remember {
-        listOf(
-            ChatPreview(
-                id = 1,
-                title = "RedFox Dev Channel",
-                lastMessage = "Сборка RedFoxGram v0.2 M3E успешно запущена на Android, Linux и Windows!",
-                time = "15:45",
-                unreadCount = 2
-            ),
-            ChatPreview(
-                id = 2,
-                title = "Opexgram & Foss Community",
-                lastMessage = "Сообщение было удалено собеседником, но сохранено в локальной базе.",
-                time = "14:20",
-                isDeletedSaved = true
-            ),
-            ChatPreview(
-                id = 3,
-                title = "Compose Multiplatform Global",
-                lastMessage = "Material 3 Expressive brings tactile spring physics to desktop and mobile.",
-                time = "12:10",
-                translatedTag = "EN → RU"
-            )
-        )
-    }
-
-    Scaffold(
-        topBar = {
-            Column {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "RedFoxGram",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            if (settings.ghostReadMessages) {
-                                Spacer(Modifier.width(8.dp))
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.tertiaryContainer
-                                ) {
-                                    Text(
-                                        "GHOST",
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                }
-                            }
-                        }
-                    }
-                )
-                if (settings.liveLrcLyricsBar) {
-                    LiveLrcMiniBar(
-                        trackTitle = "Midnight City (M3E Remix)",
-                        artist = "RedFox Audio",
-                        currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
-                        isPlaying = isPlaying,
-                        onTogglePlay = { isPlaying = !isPlaying },
-                        onOpenFullPlayer = { }
-                    )
-                }
-            }
-        },
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shadowElevation = 6.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        FilledTonalButton(
-                            onClick = {
-                                RedFoxConfig.update { current: RedFoxSettingsState ->
-                                    current.copy(ghostReadMessages = !current.ghostReadMessages)
-                                }
-                            },
-                            shape = CircleShape
-                        ) {
-                            Text(if (settings.ghostReadMessages) "Призрак: ВКЛ" else "Призрак: ВЫКЛ")
-                        }
-                        Button(
-                            onClick = { showTweaks = true },
-                            shape = CircleShape
-                        ) {
-                            Text("RedFox Tweaks")
-                        }
-                    }
-                }
-            }
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(demoChats) { chat ->
-                ExpressiveChatCard(chat = chat, antiDeleteEnabled = settings.antiDeleteMessages)
-            }
-            item { Spacer(Modifier.height(80.dp)) }
-        }
-    }
+val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
+var showTweaks by remember { mutableStateOf(false) }
+var showFullPlayer by remember { mutableStateOf(false) }
+var openedChat by remember { mutableStateOf<ChatPreview?>(null) }
+var isPlaying by remember { mutableStateOf(true) }
+if (showTweaks) {
+RedFoxTweaksScreen(onBack = { showTweaks = false })
+return
 }
-
+if (showFullPlayer) {
+RedFoxFullPlayerScreen(
+trackTitle = "Midnight City (M3E Remix)",
+artist = "RedFox Audio",
+isPlaying = isPlaying,
+onTogglePlay = { isPlaying = !isPlaying },
+onBack = { showFullPlayer = false }
+)
+return
+}
+openedChat?.let { activeChat ->
+RedFoxChatScreen(
+chat = activeChat,
+onBack = { openedChat = null }
+)
+return
+}
+val demoChats = remember {
+listOf(
+ChatPreview(
+id = 1,
+title = "RedFox Dev Channel",
+lastMessage = "Нажмите на чат, чтобы открыть переписку M3E с автопереводом и анти-удалением!",
+time = "16:38",
+unreadCount = 2
+),
+ChatPreview(
+id = 2,
+title = "Opexgram & AyuGram Stealth",
+lastMessage = "Сообщение было удалено собеседником, но сохранено в локальной базе.",
+time = "14:20",
+isDeletedSaved = true
+),
+ChatPreview(
+id = 3,
+title = "MonoGram & Mategram M3E",
+lastMessage = "Material 3 Expressive brings tactile spring physics to desktop and mobile.",
+time = "12:10",
+translatedTag = "EN → RU"
+)
+)
+}
+Scaffold(
+topBar = {
+Column {
+CenterAlignedTopAppBar(
+title = {
+Row(verticalAlignment = Alignment.CenterVertically) {
+Text(
+"RedFoxGram",
+style = MaterialTheme.typography.titleLarge,
+fontWeight = FontWeight.ExtraBold
+)
+Spacer(Modifier.width(8.dp))
+Surface(
+shape = CircleShape,
+color = MaterialTheme.colorScheme.secondaryContainer
+) {
+Text(
+settings.activePreset.badge,
+modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+style = MaterialTheme.typography.labelSmall,
+fontWeight = FontWeight.Bold,
+color = MaterialTheme.colorScheme.onSecondaryContainer
+)
+}
+}
+}
+)
+if (settings.liveLrcLyricsBar) {
+LiveLrcMiniBar(
+trackTitle = "Midnight City (M3E Remix)",
+artist = "RedFox Audio",
+currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
+isPlaying = isPlaying,
+onTogglePlay = { isPlaying = !isPlaying },
+onOpenFullPlayer = { showFullPlayer = true }
+)
+}
+}
+},
+bottomBar = {
+Box(
+modifier = Modifier
+.fillMaxWidth()
+.padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
+contentAlignment = Alignment.Center
+) {
+Surface(
+shape = CircleShape,
+color = MaterialTheme.colorScheme.surfaceContainerHighest,
+shadowElevation = 6.dp
+) {
+Row(
+modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+horizontalArrangement = Arrangement.spacedBy(8.dp),
+verticalAlignment = Alignment.CenterVertically
+) {
+FilledTonalButton(
+onClick = {
+RedFoxConfig.update { current: RedFoxSettingsState ->
+current.copy(ghostReadMessages = !current.ghostReadMessages)
+}
+},
+shape = CircleShape
+) {
+Text(if (settings.ghostReadMessages) "Призрак: ВКЛ" else "Призрак: ВЫКЛ")
+}
+Button(
+onClick = { showTweaks = true },
+shape = CircleShape
+) {
+Text("All-in-One M3E")
+}
+}
+}
+}
+}
+) { padding ->
+LazyColumn(
+modifier = Modifier
+.fillMaxSize()
+.padding(padding)
+.padding(horizontal = 14.dp),
+verticalArrangement = Arrangement.spacedBy(10.dp)
+) {
+items(demoChats) { chat ->
+ExpressiveChatCard(
+chat = chat,
+antiDeleteEnabled = settings.antiDeleteMessages,
+onClick = { openedChat = chat }
+)
+}
+item { Spacer(Modifier.height(80.dp)) }
+}
+}
+}
 @Composable
-private fun ExpressiveChatCard(chat: ChatPreview, antiDeleteEnabled: Boolean) {
-    Surface(
-        shape = RoundedCornerShape(26.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { }
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = chat.title.take(1),
-
+private fun ExpressiveChatCard(
+chat: ChatPreview,
+antiDeleteEnabled: Boolean,
+onClick: () -> Unit
+) {
+Surface(
+shape = RoundedCornerShape(26.dp),
+color = MaterialTheme.colorScheme.surfaceContainerLow,
+modifier = Modifier
+.fillMaxWidth()
+.clickable(onClick = onClick)
+) {
+Row(
+modifier = Modifier.padding(14.dp),
+verticalAlignment = Alignment.CenterVertically
+) {
+Box(
+modifier = Modifier
+.size(52.dp)
+.clip(RoundedCornerShape(18.dp))
+.background(MaterialTheme.colorScheme.primaryContainer),
+contentAlignment = Alignment.Center
+) {
+Text(
+text = chat.title.take(1),
 style = MaterialTheme.typography.titleMedium,
 fontWeight = FontWeight.Bold,
 color = MaterialTheme.colorScheme.onPrimaryContainer
