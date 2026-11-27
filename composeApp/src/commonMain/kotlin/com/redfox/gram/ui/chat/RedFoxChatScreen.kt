@@ -1,9 +1,12 @@
 package com.redfox.gram.ui.chat
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -34,6 +37,7 @@ fun RedFoxChatScreen(
 ) {
     val settings by RedFoxConfig.state.collectAsState()
     var inputText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
     val messages = remember(chat.id) {
         mutableStateListOf(
@@ -64,6 +68,12 @@ fun RedFoxChatScreen(
         )
     }
 
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.lastIndex)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -89,11 +99,16 @@ fun RedFoxChatScreen(
                                 }
                             }
                         }
-                        Text(
-                            text = if (settings.ghostReadMessages) "Режим призрака активен • Не читает" else "В сети",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        AnimatedContent(
+                            targetState = settings.ghostReadMessages,
+                            transitionSpec = { fadeIn() togetherWith fadeOut() }
+                        ) { isGhost ->
+                            Text(
+                                text = if (isGhost) "Режим призрака активен • Не читает" else "В сети • M3E Expressive",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             )
@@ -119,32 +134,39 @@ fun RedFoxChatScreen(
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            if (inputText.isNotBlank()) {
-                                messages.add(
-                                    ChatMessageItem(
-                                        id = System.currentTimeMillis(),
-                                        senderName = "Вы",
-                                        text = inputText.trim(),
-                                        time = "Сейчас",
-                                        isOutgoing = true
-                                    )
-                                )
-                                inputText = ""
-                            }
-                        },
-                        shape = CircleShape,
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)
+                    AnimatedVisibility(
+                        visible = inputText.isNotBlank(),
+                        enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                        exit = scaleOut() + fadeOut()
                     ) {
-                        Text("Отпр.")
+                        Row {
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    messages.add(
+                                        ChatMessageItem(
+                                            id = System.currentTimeMillis(),
+                                            senderName = "Вы",
+                                            text = inputText.trim(),
+                                            time = "Сейчас",
+                                            isOutgoing = true
+                                        )
+                                    )
+                                    inputText = ""
+                                },
+                                shape = CircleShape,
+                                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)
+                            ) {
+                                Text("Отпр.")
+                            }
+                        }
                     }
                 }
             }
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -154,10 +176,20 @@ fun RedFoxChatScreen(
             item { Spacer(Modifier.height(4.dp)) }
             items(messages, key = { it.id }) { msg ->
                 if (msg.isDeletedByPeer && !settings.antiDeleteMessages) return@items
-                ExpressiveMessageBubble(
-                    message = msg,
-                    autoTranslate = settings.autoTranslateForeign
-                )
+                Box(
+                    modifier = Modifier.animateItem(
+                        fadeInSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        placementSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                ) {
+                    ExpressiveMessageBubble(
+                        message = msg,
+                        autoTranslate = settings.autoTranslateForeign
+                    )
+                }
             }
             item { Spacer(Modifier.height(12.dp)) }
         }
@@ -196,53 +228,65 @@ private fun ExpressiveMessageBubble(
         Surface(
             shape = bubbleShape,
             color = containerColor,
-            modifier = Modifier.widthIn(max = 340.dp)
+            modifier = Modifier
+                .widthIn(max = 340.dp)
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 if (message.isDeletedByPeer) {
-                    Text(
-                        text = "УДАЛЕНО СОБЕСЕДНИКОМ • СОХРАНЕНО",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(Modifier.height(4.dp))
-                }
 
-                val displayText = if (showTranslation && message.translatedText != null) {
-                    message.translatedText
-                } else {
-                    message.text
-                }
-
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor
-                )
-
-                if (message.translatedText != null) {
-                    Spacer(Modifier.height(6.dp))
-                    SuggestionChip(
-                        onClick = { showTranslation = !showTranslation },
-                        label = {
-                            Text(
-                                if (showTranslation) "Показать оригинал (EN)" else "Перевести на русский",
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    )
-                }
-
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (message.editHistory != null) {
-                        Text(
-                            text = "ред. • ",
-
+Text(
+text = "УДАЛЕНО СОБЕСЕДНИКОМ • СОХРАНЕНО",
+style = MaterialTheme.typography.labelSmall,
+fontWeight = FontWeight.ExtraBold,
+color = MaterialTheme.colorScheme.error
+)
+Spacer(Modifier.height(4.dp))
+}
+val displayText = if (showTranslation && message.translatedText != null) {
+message.translatedText
+} else {
+message.text
+}
+// Анимированная смена текста при переводе
+AnimatedContent(
+targetState = displayText,
+transitionSpec = {
+(fadeIn(spring(stiffness = Spring.StiffnessLow)) + slideInVertically { it / 4 })
+.togetherWith(fadeOut() + slideOutVertically { -it / 4 })
+}
+) { animatedBody ->
+Text(
+text = animatedBody,
+style = MaterialTheme.typography.bodyLarge,
+color = contentColor
+)
+}
+if (message.translatedText != null) {
+Spacer(Modifier.height(6.dp))
+SuggestionChip(
+onClick = { showTranslation = !showTranslation },
+label = {
+Text(
+if (showTranslation) "Показать оригинал (EN)" else "Перевести на русский",
+style = MaterialTheme.typography.labelSmall
+)
+}
+)
+}
+Spacer(Modifier.height(4.dp))
+Row(
+modifier = Modifier.align(Alignment.End),
+verticalAlignment = Alignment.CenterVertically
+) {
+if (message.editHistory != null) {
+Text(
+text = "ред. • ",
 style = MaterialTheme.typography.labelSmall,
 color = contentColor.copy(alpha = 0.7f)
 )
