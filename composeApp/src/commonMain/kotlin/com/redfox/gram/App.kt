@@ -1,13 +1,12 @@
 package com.redfox.gram
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import com.redfox.gram.ui.home.RedFoxMainScreen
+import com.redfox.gram.ui.theme.RedFoxM3ETheme
 
 @Composable
 fun App() {
-    MaterialTheme(colorScheme = darkColorScheme()) {
+    RedFoxM3ETheme {
         RedFoxMainScreen()
     }
 }
