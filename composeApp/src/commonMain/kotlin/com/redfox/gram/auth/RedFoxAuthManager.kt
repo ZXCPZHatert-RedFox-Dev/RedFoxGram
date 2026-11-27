@@ -1,5 +1,6 @@
 package com.redfox.gram.auth
 
+import com.redfox.gram.engine.RedFoxTdEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +19,9 @@ data class AuthUiState(
     val codeInput: String = "",
     val password2FA: String = "",
     val accountName: String = "RedFox User",
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val deliveryHint: String = "Код отправлен в чат Telegram на ваши другие устройства",
+    val isLoading: Boolean = false
 )
 
 object RedFoxAuthManager {
@@ -35,7 +38,20 @@ object RedFoxAuthManager {
             _state.update { it.copy(errorMessage = "Введите корректный номер телефона") }
             return
         }
-        _state.update { it.copy(step = AuthStep.CODE, errorMessage = null) }
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
+        RedFoxTdEngine.sendPhoneNumber(_state.value.phoneNumber)
+    }
+
+    fun moveToStep(step: AuthStep) {
+        _state.update { it.copy(step = step, isLoading = false, errorMessage = null) }
+    }
+
+    fun setDeliveryHint(hint: String) {
+        _state.update { it.copy(deliveryHint = hint) }
+    }
+
+    fun setAuthError(message: String) {
+        _state.update { it.copy(isLoading = false, errorMessage = message) }
     }
 
     fun updateCode(value: String) {
@@ -51,7 +67,8 @@ object RedFoxAuthManager {
             _state.update { it.copy(errorMessage = "Введите 5-значный код из Telegram") }
             return
         }
-        _state.update { it.copy(step = AuthStep.PASSWORD_2FA, errorMessage = null) }
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
+        RedFoxTdEngine.sendAuthCode(_state.value.codeInput)
     }
 
     fun updatePassword2FA(value: String) {
@@ -59,14 +76,20 @@ object RedFoxAuthManager {
     }
 
     fun completeLogin(skip2FA: Boolean = false) {
-        if (!skip2FA && _state.value.password2FA.isBlank()) {
-            _state.update { it.copy(errorMessage = "Введите облачный пароль или нажмите «Пропустить»") }
+        if (skip2FA) {
+            _state.update { it.copy(step = AuthStep.AUTHORIZED, isLoading = false, errorMessage = null) }
             return
         }
-        _state.update { it.copy(step = AuthStep.AUTHORIZED, errorMessage = null) }
+        if (_state.value.password2FA.isBlank()) {
+            _state.update { it.copy(errorMessage = "Введите облачный пароль 2FA") }
+            return
+        }
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
+        RedFoxTdEngine.sendPassword2FA(_state.value.password2FA)
     }
 
     fun logout() {
+        RedFoxTdEngine.logOut()
         _state.value = AuthUiState(step = AuthStep.PHONE)
     }
 }
