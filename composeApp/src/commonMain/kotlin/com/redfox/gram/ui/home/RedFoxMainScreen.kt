@@ -13,7 +13,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.redfox.gram.config.RedFoxConfig
+import com.redfox.gram.config.RedFoxSettingsState
 import com.redfox.gram.ui.player.LiveLrcMiniBar
 import com.redfox.gram.ui.settings.RedFoxTweaksScreen
 
@@ -30,14 +36,14 @@ data class ChatPreview(
     val lastMessage: String,
     val time: String,
     val unreadCount: Int = 0,
-    val isDeletedSaved: Boolean = false, // Фишка AyuGram/Opexgram
-    val translatedTag: String? = null    // Фишка NekoX/Cherrygram
+    val isDeletedSaved: Boolean = false,
+    val translatedTag: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedFoxMainScreen() {
-    val settings by RedFoxConfig.state.collectAsState()
+    val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
     var showTweaks by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(true) }
 
@@ -101,7 +107,6 @@ fun RedFoxMainScreen() {
                         }
                     }
                 )
-                // Живой бар текстов песен LRCLIB
                 if (settings.liveLrcLyricsBar) {
                     LiveLrcMiniBar(
                         trackTitle = "Midnight City (M3E Remix)",
@@ -115,7 +120,6 @@ fun RedFoxMainScreen() {
             }
         },
         bottomBar = {
-            // Плавающая капсула навигации в стиле Material 3 Expressive
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -134,7 +138,9 @@ fun RedFoxMainScreen() {
                     ) {
                         FilledTonalButton(
                             onClick = {
-                                RedFoxConfig.update { it.copy(ghostReadMessages = !it.ghostReadMessages) }
+                                RedFoxConfig.update { current: RedFoxSettingsState ->
+                                    current.copy(ghostReadMessages = !current.ghostReadMessages)
+                                }
                             },
                             shape = CircleShape
                         ) {
@@ -169,7 +175,7 @@ fun RedFoxMainScreen() {
 @Composable
 private fun ExpressiveChatCard(chat: ChatPreview, antiDeleteEnabled: Boolean) {
     Surface(
-        shape = RoundedCornerShape(26.dp), // Expressive M3 скругление
+        shape = RoundedCornerShape(26.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier
             .fillMaxWidth()
@@ -179,7 +185,6 @@ private fun ExpressiveChatCard(chat: ChatPreview, antiDeleteEnabled: Boolean) {
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Аватар-капсула
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -189,57 +194,51 @@ private fun ExpressiveChatCard(chat: ChatPreview, antiDeleteEnabled: Boolean) {
             ) {
                 Text(
                     text = chat.title.take(1),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
 
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = chat.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = chat.time,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(Modifier.height(4.dp))
-
-                Text(
-                    text = chat.lastMessage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (chat.isDeletedSaved && antiDeleteEnabled)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // Бейджи фишек из разных open-source клиентов
-                if ((chat.isDeletedSaved && antiDeleteEnabled) || chat.translatedTag != null) {
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (chat.isDeletedSaved && antiDeleteEnabled) {
-                            Badge(containerColor = MaterialTheme.colorScheme.errorContainer) {
-                                Text(
-                                    "Удалено • Сохранено",
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-
+style = MaterialTheme.typography.titleMedium,
+fontWeight = FontWeight.Bold,
+color = MaterialTheme.colorScheme.onPrimaryContainer
+)
+}
+Spacer(Modifier.width(12.dp))
+Column(modifier = Modifier.weight(1f)) {
+Row(verticalAlignment = Alignment.CenterVertically) {
+Text(
+text = chat.title,
+style = MaterialTheme.typography.titleMedium,
+fontWeight = FontWeight.SemiBold,
+maxLines = 1,
+overflow = TextOverflow.Ellipsis,
+modifier = Modifier.weight(1f)
+)
+Text(
+text = chat.time,
+style = MaterialTheme.typography.labelSmall,
+color = MaterialTheme.colorScheme.onSurfaceVariant
+)
+}
+Spacer(Modifier.height(4.dp))
+Text(
+text = chat.lastMessage,
+style = MaterialTheme.typography.bodyMedium,
+color = if (chat.isDeletedSaved && antiDeleteEnabled)
+MaterialTheme.colorScheme.error
+else
+MaterialTheme.colorScheme.onSurfaceVariant,
+maxLines = 2,
+overflow = TextOverflow.Ellipsis
+)
+if ((chat.isDeletedSaved && antiDeleteEnabled) || chat.translatedTag != null) {
+Spacer(Modifier.height(6.dp))
+Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+if (chat.isDeletedSaved && antiDeleteEnabled) {
+Badge(containerColor = MaterialTheme.colorScheme.errorContainer) {
+Text(
+"Удалено • Сохранено",
+modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+color = MaterialTheme.colorScheme.onErrorContainer
+)
+}
 }
 if (chat.translatedTag != null) {
 Badge(containerColor = MaterialTheme.colorScheme.secondaryContainer) {
