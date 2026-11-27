@@ -276,7 +276,44 @@ forceRead = true
 }
 }
 }
-fun sendTextMessage(chatId: Long, text: String) {
+
+    fun sendMediaFile(chatId: Long, localPath: String, isImage: Boolean, caption: String = "") {
+        scope.launch {
+            val tdl = client ?: return@launch
+            val inputFile = InputFileLocal(path = localPath)
+            val formattedCaption = FormattedText(text = caption, entities = emptyArray())
+            val content: InputMessageContent = if (isImage) {
+                InputMessagePhoto(
+                    photo = inputFile,
+                    thumbnail = null,
+                    addedStickerFileIds = intArrayOf(),
+                    width = 0,
+                    height = 0,
+                    caption = formattedCaption,
+                    showCaptionAboveMedia = false,
+                    selfDestructType = null,
+                    hasSpoiler = false
+                )
+            } else {
+                InputMessageDocument(
+                    document = inputFile,
+                    thumbnail = null,
+                    disableContentTypeDetection = false,
+                    caption = formattedCaption
+                )
+            }
+            tdl.sendMessage(
+                chatId = chatId,
+                messageThreadId = 0L,
+                replyTo = null,
+                options = null,
+                replyMarkup = null,
+                inputMessageContent = content
+            )
+        }
+    }
+
+    fun sendTextMessage(chatId: Long, text: String) {
 if (text.isBlank()) return
 scope.launch {
 val tdl = client ?: return@launch
