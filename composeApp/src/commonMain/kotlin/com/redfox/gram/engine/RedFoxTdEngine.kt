@@ -8,6 +8,7 @@ import com.redfox.gram.network.ProxyProtocol
 import com.redfox.gram.network.RedFoxProxyManager
 import com.redfox.gram.ui.home.ChatPreview
 import dev.g000sha256.tdl.TdlClient
+import dev.g000sha256.tdl.TdlResult
 import dev.g000sha256.tdl.dto.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
