@@ -224,4 +224,8 @@ scope.launch {
 runCatching { client?.logOut() }
 }
 }
+
+    fun refreshChatsNow() {
+        scope.launch { client?.let { loadRealChats(it) } }
+    }
 }

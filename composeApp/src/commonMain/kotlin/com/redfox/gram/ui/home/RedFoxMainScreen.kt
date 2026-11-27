@@ -1,4 +1,5 @@
 package com.redfox.gram.ui.home
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -19,176 +20,192 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.redfox.gram.bridge.RedFoxBridge
 import com.redfox.gram.config.RedFoxConfig
 import com.redfox.gram.config.RedFoxSettingsState
+import com.redfox.gram.engine.RedFoxTdEngine
 import com.redfox.gram.ui.chat.RedFoxChatScreen
+import com.redfox.gram.ui.components.ExpressiveAvatarStyle
+import com.redfox.gram.ui.components.buildExpressiveAvatarShape
 import com.redfox.gram.ui.player.LiveLrcMiniBar
 import com.redfox.gram.ui.player.RedFoxFullPlayerScreen
 import com.redfox.gram.ui.settings.RedFoxTweaksScreen
+
 data class ChatPreview(
-val id: Long,
-val title: String,
-val lastMessage: String,
-val time: String,
-val unreadCount: Int = 0,
-val isDeletedSaved: Boolean = false,
-val translatedTag: String? = null
+    val id: Long,
+    val title: String,
+    val lastMessage: String,
+    val time: String,
+    val unreadCount: Int = 0,
+    val isDeletedSaved: Boolean = false,
+    val translatedTag: String? = null
 )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedFoxMainScreen() {
-val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
-var showTweaks by remember { mutableStateOf(false) }
-var showFullPlayer by remember { mutableStateOf(false) }
-var openedChat by remember { mutableStateOf<ChatPreview?>(null) }
-var isPlaying by remember { mutableStateOf(true) }
-if (showTweaks) {
-RedFoxTweaksScreen(onBack = { showTweaks = false })
-return
-}
-if (showFullPlayer) {
-RedFoxFullPlayerScreen(
-trackTitle = "Midnight City (M3E Remix)",
-artist = "RedFox Audio",
-isPlaying = isPlaying,
-onTogglePlay = { isPlaying = !isPlaying },
-onBack = { showFullPlayer = false }
-)
-return
-}
-openedChat?.let { activeChat ->
-RedFoxChatScreen(
-chat = activeChat,
-onBack = { openedChat = null }
-)
-return
-}
-val demoChats = remember {
-listOf(
-ChatPreview(
-id = 1,
-title = "RedFox Dev Channel",
-lastMessage = "Нажмите на чат, чтобы открыть переписку M3E с автопереводом и анти-удалением!",
-time = "16:38",
-unreadCount = 2
-),
-ChatPreview(
-id = 2,
-title = "Opexgram & AyuGram Stealth",
-lastMessage = "Сообщение было удалено собеседником, но сохранено в локальной базе.",
-time = "14:20",
-isDeletedSaved = true
-),
-ChatPreview(
-id = 3,
-title = "MonoGram & Mategram M3E",
-lastMessage = "Material 3 Expressive brings tactile spring physics to desktop and mobile.",
-time = "12:10",
-translatedTag = "EN → RU"
-)
-)
-}
-Scaffold(
-topBar = {
-Column {
-CenterAlignedTopAppBar(
-title = {
-Row(verticalAlignment = Alignment.CenterVertically) {
-Text(
-"RedFoxGram",
-style = MaterialTheme.typography.titleLarge,
-fontWeight = FontWeight.ExtraBold
-)
-Spacer(Modifier.width(8.dp))
-Surface(
-shape = CircleShape,
-color = MaterialTheme.colorScheme.secondaryContainer
-) {
-Text(
-settings.activePreset.badge,
-modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-style = MaterialTheme.typography.labelSmall,
-fontWeight = FontWeight.Bold,
-color = MaterialTheme.colorScheme.onSecondaryContainer
-)
-}
-}
-}
-)
-if (settings.liveLrcLyricsBar) {
-LiveLrcMiniBar(
-trackTitle = "Midnight City (M3E Remix)",
-artist = "RedFox Audio",
-currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
-isPlaying = isPlaying,
-onTogglePlay = { isPlaying = !isPlaying },
-onOpenFullPlayer = { showFullPlayer = true }
-)
-}
-}
-},
-bottomBar = {
-Box(
-modifier = Modifier
-.fillMaxWidth()
-.padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
-contentAlignment = Alignment.Center
-) {
-Surface(
-shape = CircleShape,
-color = MaterialTheme.colorScheme.surfaceContainerHighest,
-shadowElevation = 6.dp
-) {
-Row(
-modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-horizontalArrangement = Arrangement.spacedBy(8.dp),
-verticalAlignment = Alignment.CenterVertically
-) {
-FilledTonalButton(
-onClick = {
-RedFoxConfig.update { current: RedFoxSettingsState ->
-current.copy(ghostReadMessages = !current.ghostReadMessages)
-}
-},
-shape = CircleShape
-) {
-Text(if (settings.ghostReadMessages) "Призрак: ВКЛ" else "Призрак: ВЫКЛ")
-}
-Button(
-onClick = { showTweaks = true },
-shape = CircleShape
-) {
-Text("All-in-One M3E")
-}
-}
-}
-}
-}
-) { padding ->
-LazyColumn(
-modifier = Modifier
-.fillMaxSize()
-.padding(padding)
-.padding(horizontal = 14.dp),
-verticalArrangement = Arrangement.spacedBy(10.dp)
-) {
-items(demoChats) { chat ->
-ExpressiveChatCard(
-chat = chat,
+    val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
+    val realChats by RedFoxBridge.liveChats.collectAsState()
+    var showTweaks by remember { mutableStateOf(false) }
+    var showFullPlayer by remember { mutableStateOf(false) }
+    var openedChat by remember { mutableStateOf<ChatPreview?>(null) }
+    var isPlaying by remember { mutableStateOf(true) }
+    var avatarStyle by remember { mutableStateOf(ExpressiveAvatarStyle.FLOWER_12) }
+
+    LaunchedEffect(Unit) {
+        RedFoxTdEngine.refreshChatsNow()
+    }
+
+    if (showTweaks) {
+        RedFoxTweaksScreen(onBack = { showTweaks = false })
+        return
+    }
+    if (showFullPlayer) {
+        RedFoxFullPlayerScreen(
+            trackTitle = "Midnight City (M3E Remix)",
+            artist = "RedFox Audio",
+            isPlaying = isPlaying,
+            onTogglePlay = { isPlaying = !isPlaying },
+            onBack = { showFullPlayer = false }
+        )
+        return
+    }
+    openedChat?.let { activeChat ->
+        RedFoxChatScreen(
+            chat = activeChat,
+            onBack = { openedChat = null }
+        )
+        return
+    }
+
+    val fallbackDemoChats = remember {
+        listOf(
+            ChatPreview(
+                id = 1,
+                title = "Загрузка реальных чатов TDLib...",
+                lastMessage = "Нажмите кнопку обновления сверху или подождите пару секунд",
+                time = "Сейчас",
+                unreadCount = 1
+            )
+        )
+    }
+
+    val displayedChats = if (realChats.isNotEmpty()) realChats else fallbackDemoChats
+
+    Scaffold(
+        topBar = {
+            Column {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "RedFoxGram",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.clickable {
+                                    val allStyles = ExpressiveAvatarStyle.entries
+                                    avatarStyle = allStyles[(avatarStyle.ordinal + 1) % allStyles.size]
+                                }
+                            ) {
+                                Text(
+                                    text = avatarStyle.label,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        TextButton(onClick = { RedFoxTdEngine.refreshChatsNow() }) {
+                            Text("Обновить")
+                        }
+                    }
+                )
+                if (settings.liveLrcLyricsBar) {
+                    LiveLrcMiniBar(
+                        trackTitle = "Midnight City (M3E Remix)",
+                        artist = "RedFox Audio",
+                        currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
+                        isPlaying = isPlaying,
+                        onTogglePlay = { isPlaying = !isPlaying },
+                        onOpenFullPlayer = { showFullPlayer = true }
+                    )
+                }
+            }
+        },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    shadowElevation = 6.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilledTonalButton(
+                            onClick = {
+                                RedFoxConfig.update { current: RedFoxSettingsState ->
+                                    current.copy(ghostReadMessages = !current.ghostReadMessages)
+                                }
+                            },
+                            shape = CircleShape
+                        ) {
+                            Text(if (settings.ghostReadMessages) "Призрак: ВКЛ" else "Призрак: ВЫКЛ")
+                        }
+                        Button(
+                            onClick = { showTweaks = true },
+                            shape = CircleShape
+                        ) {
+                            Text("All-in-One M3E")
+                        }
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(displayedChats, key = { it.id }) { chat ->
+                ExpressiveChatCard(
+                    chat = chat,
+
+avatarStyle = avatarStyle,
 antiDeleteEnabled = settings.antiDeleteMessages,
 onClick = { openedChat = chat }
 )
 }
-item { Spacer(Modifier.height(80.dp)) }
+item { Spacer(Modifier.height(88.dp)) }
 }
 }
 }
 @Composable
 private fun ExpressiveChatCard(
 chat: ChatPreview,
+avatarStyle: ExpressiveAvatarStyle,
 antiDeleteEnabled: Boolean,
 onClick: () -> Unit
 ) {
+val avatarShape = remember(avatarStyle) { buildExpressiveAvatarShape(avatarStyle) }
 Surface(
 shape = RoundedCornerShape(26.dp),
 color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -202,13 +219,13 @@ verticalAlignment = Alignment.CenterVertically
 ) {
 Box(
 modifier = Modifier
-.size(52.dp)
-.clip(RoundedCornerShape(18.dp))
+.size(54.dp)
+.clip(avatarShape)
 .background(MaterialTheme.colorScheme.primaryContainer),
 contentAlignment = Alignment.Center
 ) {
 Text(
-text = chat.title.take(1),
+text = chat.title.take(1).uppercase(),
 style = MaterialTheme.typography.titleMedium,
 fontWeight = FontWeight.Bold,
 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -235,10 +252,11 @@ Spacer(Modifier.height(4.dp))
 Text(
 text = chat.lastMessage,
 style = MaterialTheme.typography.bodyMedium,
-color = if (chat.isDeletedSaved && antiDeleteEnabled)
+color = if (chat.isDeletedSaved && antiDeleteEnabled) {
 MaterialTheme.colorScheme.error
-else
-MaterialTheme.colorScheme.onSurfaceVariant,
+} else {
+MaterialTheme.colorScheme.onSurfaceVariant
+},
 maxLines = 2,
 overflow = TextOverflow.Ellipsis
 )
