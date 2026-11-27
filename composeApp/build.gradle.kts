@@ -42,6 +42,7 @@ kotlin {
 android {
     namespace = "com.redfox.gram"
     compileSdk = 35
+    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
         applicationId = "com.redfox.gram"
         minSdk = 24
