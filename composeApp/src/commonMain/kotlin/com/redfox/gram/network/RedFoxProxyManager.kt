@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URL
 import kotlin.random.Random
 
@@ -43,11 +46,19 @@ object RedFoxProxyManager {
 
     fun toggleEnabled(enabled: Boolean) {
         _state.update { it.copy(enabled = enabled) }
-        if (enabled && _state.value.nodes.isEmpty()) {
+        if (!enabled) {
+            RedFoxTdEngine.syncProxyState(false, null)
+            return
+        }
+        if (_state.value.nodes.isEmpty()) {
             fetchPublicMtprotoNodes()
         } else {
             val active = _state.value.nodes.find { it.id == _state.value.activeNodeId }
-            RedFoxTdEngine.syncProxyState(enabled, active)
+                ?: _state.value.nodes.firstOrNull()
+            if (active != null) {
+                _state.update { it.copy(activeNodeId = active.id) }
+                RedFoxTdEngine.syncProxyState(true, active)
+            }
         }
     }
 
@@ -61,63 +72,109 @@ object RedFoxProxyManager {
         RedFoxTdEngine.syncProxyState(true, node)
     }
 
+    private suspend fun measureTcpPing(host: String, port: Int): Int = withContext(Dispatchers.Default) {
+        runCatching {
+            val start = System.currentTimeMillis()
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), 2200)
+            }
+            (System.currentTimeMillis() - start).toInt().coerceAtLeast(1)
+        }.getOrDefault(-1)
+    }
+
     fun refreshAllPings() {
         if (_state.value.nodes.isEmpty()) {
             fetchPublicMtprotoNodes()
             return
         }
-        _state.update { current ->
-            val updated = current.nodes.map { node ->
-                val jitter = Random.nextInt(-8, 15)
-                val base = if (node.pingMs > 0) node.pingMs else 55
-                node.copy(pingMs = (base + jitter).coerceIn(24, 180))
+        _state.update { it.copy(isCheckingPing = true) }
+        scope.launch {
+            val tested = _state.value.nodes.map { node ->
+                val ms = measureTcpPing(node.host, node.port)
+                node.copy(pingMs = ms)
             }
-            val bestId = if (current.autoSmartRotation) {
-                updated.minByOrNull { it.pingMs }?.id ?: current.activeNodeId
+            val alive = tested.filter { it.pingMs > 0 }.sortedBy { it.pingMs }
+            val finalNodes = if (alive.isNotEmpty()) tested.sortedBy { if (it.pingMs > 0) it.pingMs else 99999 } else tested
+            val bestId = if (_state.value.autoSmartRotation && alive.isNotEmpty()) {
+                alive.first().id
             } else {
-                current.activeNodeId
+                _state.value.activeNodeId.ifEmpty { finalNodes.firstOrNull()?.id ?: "" }
             }
-            current.copy(nodes = updated, activeNodeId = bestId)
+            _state.update {
+                it.copy(
+                    nodes = finalNodes,
+                    activeNodeId = bestId,
+                    isCheckingPing = false
+                )
+            }
+            if (_state.value.enabled) {
+                val active = finalNodes.find { it.id == bestId }
+                RedFoxTdEngine.syncProxyState(true, active)
+            }
         }
     }
 
     fun fetchPublicMtprotoNodes() {
         _state.update { it.copy(isCheckingPing = true) }
         scope.launch {
-            val fetched = mutableListOf<ProxyNode>()
+            val candidates = mutableListOf<ProxyNode>()
             val sources = listOf(
+                "https://jsdelivr.net",
+                "https://jsdelivr.net",
                 "https://githubusercontent.com",
                 "https://githubusercontent.com"
             )
             for (src in sources) {
                 runCatching {
                     val body = URL(src).readText()
-                    val regex = Regex("""server=([a-zA-Z0-9.\-]+)&port=(\d+)&secret=([a-zA-Z0-9_\-=]+)""")
-                    regex.findAll(body).take(8).forEachIndexed { idx, match ->
-                        val host = match.groupValues[1]
-                        val port = match.groupValues[2].toIntOrNull() ?: 443
-                        val secret = match.groupValues[3]
-                        if (fetched.none { it.host == host && it.port == port }) {
-                            fetched.add(
+                    val linkRegex = Regex("""server=([a-zA-Z0-9.\-]+)&port=(\d+)&secret=([a-zA-Z0-9_\-=]+)""")
+                    linkRegex.findAll(body).take(25).forEach { m ->
+                        val host = m.groupValues[1]
+                        val port = m.groupValues[2].toIntOrNull() ?: 443
+                        val secret = m.groupValues[3]
+                        if (candidates.none { it.host == host && it.port == port }) {
+                            candidates.add(
                                 ProxyNode(
-                                    id = "pub-${fetched.size + 1}",
-                                    name = "Auto MTProto #${fetched.size + 1} ($host)",
+                                    id = "pub-${candidates.size + 1}",
+                                    name = "MTProto #${candidates.size + 1} ($host)",
                                     host = host,
                                     port = port,
                                     secret = secret,
-                                    protocol = ProxyProtocol.MTPROTO,
-                                    pingMs = Random.nextInt(32, 110),
-                                    isBuiltIn = true
+                                    protocol = ProxyProtocol.MTPROTO
+                                )
+                            )
+                        }
+                    }
+                    val jsonRegex = Regex(""""host"\s*:\s*"([^"]+)"\s*,\s*"port"\s*:\s*(\d+)\s*,\s*"secret"\s*:\s*"([^"]+)"""")
+                    jsonRegex.findAll(body).take(25).forEach { m ->
+                        val host = m.groupValues[1]
+                        val port = m.groupValues[2].toIntOrNull() ?: 443
+                        val secret = m.groupValues[3]
+                        if (candidates.none { it.host == host && it.port == port }) {
+                            candidates.add(
+                                ProxyNode(
+                                    id = "pub-${candidates.size + 1}",
+                                    name = "MTProto #${candidates.size + 1} ($host)",
+                                    host = host,
+                                    port = port,
+                                    secret = secret,
+                                    protocol = ProxyProtocol.MTPROTO
                                 )
                             )
                         }
                     }
                 }
-                if (fetched.isNotEmpty()) break
+                if (candidates.size >= 15) break
             }
 
+            val checked = candidates.map { node ->
+                node.copy(pingMs = measureTcpPing(node.host, node.port))
+            }
+            val alive = checked.filter { it.pingMs > 0 }.sortedBy { it.pingMs }
+            val resultList = if (alive.isNotEmpty()) alive else checked
+
             _state.update { current ->
-                val merged = (fetched + current.nodes).distinctBy { "${it.host}:${it.port}" }
+                val merged = (resultList + current.nodes).distinctBy { "${it.host}:${it.port}" }
                 val firstId = merged.firstOrNull()?.id ?: ""
                 current.copy(
                     nodes = merged,
@@ -153,7 +210,7 @@ object RedFoxProxyManager {
             port = port,
             secret = secret,
             protocol = protocol,
-            pingMs = Random.nextInt(35, 95),
+            pingMs = -1,
             isBuiltIn = false
         )
 
@@ -165,6 +222,7 @@ object RedFoxProxyManager {
             )
         }
         RedFoxTdEngine.syncProxyState(true, newNode)
+        refreshAllPings()
         return true
     }
 }
