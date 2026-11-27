@@ -19,7 +19,7 @@ object RedFoxTdEngine {
     private var client: TdlClient? = null
     private var started = false
 
-    private val _connectionStatus = MutableStateFlow("Подключение к Telegram...")
+    private val _connectionStatus = MutableStateFlow("Запуск нативного ядра TDLib...")
     val connectionStatus = _connectionStatus.asStateFlow()
 
     fun start(dbDirectory: String = "redfox_tdlib_db") {
@@ -28,19 +28,35 @@ object RedFoxTdEngine {
 
         scope.launch {
             try {
+                if (RedFoxSecrets.API_ID == 0 || RedFoxSecrets.API_HASH.isBlank()) {
+                    _connectionStatus.value = "Ошибка: не заданы API_ID / API_HASH в сборке!"
+                    RedFoxAuthManager.setAuthError("Ключи TELEGRAM_API_ID / API_HASH пусты")
+                    return@launch
+                }
+
                 val tdl = TdlClient.create()
                 client = tdl
 
+                // Будим нативное C++ ядро TDLib
+                runCatching { tdl.setLogVerbosityLevel(1) }
                 applyActiveProxy(tdl)
 
+                // Запускаем слушатель состояний авторизации
                 launch {
                     tdl.authorizationStateUpdates.collect { update ->
                         handleAuthState(tdl, update.authorizationState, dbDirectory)
                     }
                 }
+
+                // Явно запрашиваем текущее состояние авторизации, чтобы инициировать цепочку
+                val initialRes = tdl.getAuthorizationState()
+                val initialState = (initialRes as? TdlResult.Success)?.result
+                if (initialState != null) {
+                    handleAuthState(tdl, initialState, dbDirectory)
+                }
             } catch (e: Throwable) {
-                _connectionStatus.value = "Ошибка ядра TDLib: ${e.message}"
-                RedFoxAuthManager.setAuthError("Ошибка инициализации TDLib: ${e.message}")
+                _connectionStatus.value = "Сбой TDLib: ${e.message}"
+                RedFoxAuthManager.setAuthError("Сбой ядра TDLib: ${e.message}")
             }
         }
     }
@@ -67,8 +83,8 @@ object RedFoxTdEngine {
     private suspend fun handleAuthState(tdl: TdlClient, state: AuthorizationState, dbDir: String) {
         when (state) {
             is AuthorizationStateWaitTdlibParameters -> {
-                _connectionStatus.value = "Инициализация сессии..."
-                tdl.setTdlibParameters(
+                _connectionStatus.value = "Передача параметров API (${RedFoxSecrets.API_ID})..."
+                val res = tdl.setTdlibParameters(
                     useTestDc = false,
                     databaseDirectory = dbDir,
                     filesDirectory = "$dbDir/files",
@@ -81,19 +97,23 @@ object RedFoxTdEngine {
                     apiHash = RedFoxSecrets.API_HASH,
                     systemLanguageCode = "ru",
                     deviceModel = "RedFoxGram M3E",
-                    systemVersion = "Android 17 / Desktop",
+                    systemVersion = "Android 17",
                     applicationVersion = "0.2-M3E"
                 )
+                if (res is TdlResult.Failure) {
+                    _connectionStatus.value = "Ошибка параметров: ${res.message}"
+                    RedFoxAuthManager.setAuthError(res.message)
+                }
             }
             is AuthorizationStateWaitPhoneNumber -> {
-                _connectionStatus.value = "Готов к входу по номеру"
+                _connectionStatus.value = "Готов к входу • Введите номер"
                 RedFoxAuthManager.moveToStep(AuthStep.PHONE)
             }
             is AuthorizationStateWaitCode -> {
                 val deliveryHint = when (state.codeInfo.type) {
-                    is AuthenticationCodeTypeTelegramMessage -> "Код отправлен в чат Telegram на ваших других устройствах!"
-                    is AuthenticationCodeTypeSms -> "Код отправлен по SMS (проверьте активные сессии Telegram)"
-                    else -> "Код подтверждения отправлен в ваши активные сессии Telegram"
+                    is AuthenticationCodeTypeTelegramMessage -> "Код отправлен в чат Telegram на ваших устройствах!"
+                    is AuthenticationCodeTypeSms -> "Код отправлен по SMS"
+                    else -> "Код отправлен в ваши активные сессии Telegram"
                 }
                 _connectionStatus.value = deliveryHint
                 RedFoxAuthManager.setDeliveryHint(deliveryHint)
@@ -146,52 +166,55 @@ object RedFoxTdEngine {
 
     fun sendPhoneNumber(phone: String) {
         scope.launch {
-            runCatching {
-                val authSettings = PhoneNumberAuthenticationSettings(
-                    allowFlashCall = false,
-                    allowMissedCall = false,
-                    isCurrentPhoneNumber = false,
-                    hasUnknownPhoneNumber = false,
-                    allowSmsRetrieverApi = false,
-                    firebaseAuthenticationSettings = null,
-                    authenticationTokens = emptyArray()
-                )
-                client?.setAuthenticationPhoneNumber(
-                    phoneNumber = phone.replace(" ", ""),
-                    settings = authSettings
-                )
-            }.onFailure {
-                RedFoxAuthManager.setAuthError(it.message ?: "Ошибка отправки номера")
+            val tdl = client
+            if (tdl == null) {
+                RedFoxAuthManager.setAuthError("Ядро TDLib ещё не готово, подождите 2 секунды")
+                return@launch
+            }
+            _connectionStatus.value = "Отправка номера на серверы Telegram..."
+            val authSettings = PhoneNumberAuthenticationSettings(
+                allowFlashCall = false,
+                allowMissedCall = false,
+                isCurrentPhoneNumber = false,
+                hasUnknownPhoneNumber = false,
+                allowSmsRetrieverApi = false,
+                firebaseAuthenticationSettings = null,
+                authenticationTokens = emptyArray()
+            )
+            val res = tdl.setAuthenticationPhoneNumber(
+                phoneNumber = phone.replace(" ", ""),
+                settings = authSettings
+            )
+            if (res is TdlResult.Failure) {
+                _connectionStatus.value = "Ошибка Telegram: ${res.message}"
+                RedFoxAuthManager.setAuthError("Ошибка (${res.code}): ${res.message}")
             }
         }
     }
 
     fun resendCode() {
         scope.launch {
-            runCatching {
-                client?.resendAuthenticationCode(reason = ResendCodeReasonUserRequest())
-            }.onFailure {
-                RedFoxAuthManager.setAuthError(it.message ?: "Не удалось запросить код повторно")
+            val res = client?.resendAuthenticationCode(reason = ResendCodeReasonUserRequest())
+            if (res is TdlResult.Failure) {
+                RedFoxAuthManager.setAuthError(res.message)
             }
         }
     }
 
     fun sendAuthCode(code: String) {
         scope.launch {
-            runCatching {
-                client?.checkAuthenticationCode(code = code)
-            }.onFailure {
-                RedFoxAuthManager.setAuthError(it.message ?: "Неверный код подтверждения")
+            val res = client?.checkAuthenticationCode(code = code)
+            if (res is TdlResult.Failure) {
+                RedFoxAuthManager.setAuthError("Неверный код: ${res.message}")
             }
         }
     }
 
     fun sendPassword2FA(password: String) {
         scope.launch {
-            runCatching {
-                client?.checkAuthenticationPassword(password = password)
-            }.onFailure {
-                RedFoxAuthManager.setAuthError(it.message ?: "Неверный пароль 2FA")
+            val res = client?.checkAuthenticationPassword(password = password)
+            if (res is TdlResult.Failure) {
+                RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message}")
             }
         }
     }
