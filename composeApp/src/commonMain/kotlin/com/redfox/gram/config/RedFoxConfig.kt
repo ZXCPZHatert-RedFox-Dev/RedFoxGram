@@ -6,10 +6,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 enum class ClientPreset(val title: String, val badge: String, val description: String) {
-    ULTIMATE("RedFox Ultimate", "ALL-IN-ONE", "Все функции Opex, Ayu, extera, NekoX + M3E"),
-    OPEX_AYU("Opex / Ayu Mode", "STEALTH", "Максимальный призрак, анти-удаление и история правок"),
-    EXTERA_CHERRY("extera / Cherry", "MEDIA & PLUGINS", "Фото без сжатия, плагины .rfplugin и чистый UI"),
-    NEKO_FORK("NekoX / Fork", "TOOLS & PROXY", "Авто-переводчик сообщений, показ ID/DC и ротация прокси")
+    ULTIMATE("RedFox Ultimate", "ALL-IN-ONE M3E", "Все фичи AyuGram, Cherrygram, Hortay, MonoGram, exteraGram + M3E"),
+    AYU_OPEX("AyuGram & Opex", "STEALTH & HISTORY", "Максимальный призрак, анти-удаление и локальная история правок"),
+    CHERRY_EXTERA("Cherrygram & extera", "CHATS & MEDIA", "Пересылка без автора, перемотка кружочков, плагины .rfplugin"),
+    HORTAY_MONO("Hortay & MonoGram", "PURE M3E FEED", "Лента каналов в стиле M3E, пружинная физика и дизайн Material 3"),
+    MATE_MATERIAL("Mategram & Materialgram", "TOOLS & ADMIN", "Автоперевод, быстрое меню админа, массовая очистка >100 сообщ."),
+    NEKO_FORK("NekoX Fork", "PROXY & ID", "Умная ротация прокси, показ ID/DC и расширенные настройки")
 }
 
 data class RedFoxSettingsState(
@@ -20,9 +22,16 @@ data class RedFoxSettingsState(
     val forceOffline: Boolean = false,
     val antiDeleteMessages: Boolean = true,
     val saveEditHistory: Boolean = true,
-    val disableSponsoredAds: Boolean = true,
+    val quickForwardNoQuote: Boolean = true,
+    val seekableVideoNotes: Boolean = true,
     val sendHighResPhotos: Boolean = true,
     val pluginsEnabled: Boolean = true,
+    val disableSponsoredAds: Boolean = true,
+    val hidePhoneNumber: Boolean = true,
+    val channelFeedMode: Boolean = false,
+    val springPhysicsScroll: Boolean = true,
+    val googleSansFont: Boolean = true,
+    val adminQuickMenu: Boolean = true,
     val autoTranslateForeign: Boolean = true,
     val showUserIdsAndDc: Boolean = true,
     val smartProxyRotation: Boolean = true,
@@ -42,7 +51,7 @@ object RedFoxConfig {
         _state.update {
             when (preset) {
                 ClientPreset.ULTIMATE -> RedFoxSettingsState(activePreset = preset)
-                ClientPreset.OPEX_AYU -> it.copy(
+                ClientPreset.AYU_OPEX -> it.copy(
                     activePreset = preset,
                     ghostReadMessages = true,
                     ghostReadStories = true,
@@ -50,12 +59,27 @@ object RedFoxConfig {
                     antiDeleteMessages = true,
                     saveEditHistory = true
                 )
-                ClientPreset.EXTERA_CHERRY -> it.copy(
+                ClientPreset.CHERRY_EXTERA -> it.copy(
                     activePreset = preset,
                     ghostReadMessages = false,
+                    quickForwardNoQuote = true,
+                    seekableVideoNotes = true,
                     sendHighResPhotos = true,
                     pluginsEnabled = true,
                     disableSponsoredAds = true
+                )
+                ClientPreset.HORTAY_MONO -> it.copy(
+                    activePreset = preset,
+                    channelFeedMode = true,
+                    springPhysicsScroll = true,
+                    googleSansFont = true,
+                    wavySeekbar = true
+                )
+                ClientPreset.MATE_MATERIAL -> it.copy(
+                    activePreset = preset,
+                    autoTranslateForeign = true,
+                    adminQuickMenu = true,
+                    googleSansFont = true
                 )
                 ClientPreset.NEKO_FORK -> it.copy(
                     activePreset = preset,

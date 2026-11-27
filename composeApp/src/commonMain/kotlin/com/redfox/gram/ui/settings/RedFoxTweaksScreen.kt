@@ -1,8 +1,10 @@
 package com.redfox.gram.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -12,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.redfox.gram.config.ClientPreset
 import com.redfox.gram.config.RedFoxConfig
 import com.redfox.gram.config.RedFoxSettingsState
 
@@ -25,9 +28,9 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
             LargeTopAppBar(
                 title = {
                     Column {
-                        Text("RedFox Tweaks", fontWeight = FontWeight.Bold)
+                        Text("RedFox M3E Hub", fontWeight = FontWeight.Bold)
                         Text(
-                            "Приватность, обход лимитов и плеер",
+                            "AyuGram • Cherrygram • Hortay • MonoGram • extera • Mategram",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -35,7 +38,7 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Text("← Назад")
+                        Text("<- Назад")
                     }
                 }
             )
@@ -49,7 +52,25 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                SectionHeader("Режим призрака (Opex-стандарт)")
+                SectionHeader("Пресеты клиентов (Быстрое переключение)")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ClientPreset.entries.forEach { preset ->
+                        FilterChip(
+                            selected = state.activePreset == preset,
+                            onClick = { RedFoxConfig.applyPreset(preset) },
+                            label = { Text(preset.title) }
+                        )
+                    }
+                }
+            }
+
+            item {
+                SectionHeader("AyuGram & Opex (Стелс и история)")
                 SettingsCard {
                     TweakSwitchRow(
                         title = "Не читать сообщения",
@@ -66,102 +87,138 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     TweakSwitchRow(
-                        title = "Скрывать статус «печатает...»",
-                        subtitle = "Не показывать собеседнику набор текста и запись ГС",
-                        checked = state.hideTypingStatus,
-                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(hideTypingStatus = v) } }
-                    )
-                }
-            }
-
-            item {
-                SectionHeader("Защита и локальные улучшения")
-                SettingsCard {
-                    TweakSwitchRow(
-                        title = "Анти-удаление сообщений",
-                        subtitle = "Сохранять удаленные собеседником сообщения с пометкой",
+                        title = "Анти-удаление и история правок",
+                        subtitle = "Сохранять удаленные сообщения и старые версии текста",
                         checked = state.antiDeleteMessages,
-                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(antiDeleteMessages = v) } }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    TweakSwitchRow(
-                        title = "Отключить рекламу",
-                        subtitle = "Фильтровать спонсорские посты в каналах",
-                        checked = state.disableSponsoredAds,
-                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(disableSponsoredAds = v) } }
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(antiDeleteMessages = v, saveEditHistory = v) } }
                     )
                 }
             }
 
             item {
-                SectionHeader("Мультимедиа и плагины RedFox")
+                SectionHeader("Cherrygram & exteraGram (Чаты и медиа)")
                 SettingsCard {
                     TweakSwitchRow(
-                        title = "Живой бар текста (LRCLIB)",
-                        subtitle = "Автоматически подгружать синхронный текст песен",
-                        checked = state.liveLrcLyricsBar,
-                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(liveLrcLyricsBar = v) } }
+                        title = "Пересылка без автора",
+                        subtitle = "Быстрая пересылка сообщений без ссылки на отправителя",
+                        checked = state.quickForwardNoQuote,
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(quickForwardNoQuote = v) } }
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     TweakSwitchRow(
-                        title = "Система плагинов (.rfplugin)",
-                        subtitle = "Разрешить установку скриптов и тем из чатов",
-                        checked = state.pluginsEnabled,
-                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(pluginsEnabled = v) } }
+                        title = "Перемотка кружочков",
+                        subtitle = "Полоса прогресса для видеосообщений (extera/Materialgram)",
+                        checked = state.seekableVideoNotes,
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(seekableVideoNotes = v) } }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    TweakSwitchRow(
+                        title = "Отключить рекламу и скрыть номер",
+                        subtitle = "Убирать спонсорские посты и прятать телефон в меню",
+                        checked = state.disableSponsoredAds,
+                        onCheckedChange = { v -> RedFoxConfig.update { it.copy(disableSponsoredAds = v, hidePhoneNumber = v) } }
                     )
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-        }
-    }
-}
+            item {
 
+SectionHeader("Hortay, MonoGram & Materialgram (M3E)")
+SettingsCard {
+TweakSwitchRow(
+title = "Лента каналов (Hortay Feed Mode)",
+subtitle = "Объединять посты из всех подписок в единую M3E-ленту",
+checked = state.channelFeedMode,
+onCheckedChange = { v -> RedFoxConfig.update { it.copy(channelFeedMode = v) } }
+)
+HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+TweakSwitchRow(
+title = "Пружинная физика (MonoGram M3E)",
+subtitle = "Тактильные spring-анимации карточек и списков",
+checked = state.springPhysicsScroll,
+onCheckedChange = { v -> RedFoxConfig.update { it.copy(springPhysicsScroll = v) } }
+)
+HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+TweakSwitchRow(
+title = "Меню админа и шрифт Google Sans",
+subtitle = "Быстрые действия в группах и фирменная типографика",
+checked = state.adminQuickMenu,
+onCheckedChange = { v -> RedFoxConfig.update { it.copy(adminQuickMenu = v, googleSansFont = v) } }
+)
+}
+}
+item {
+SectionHeader("Mategram, NekoX & Мультимедиа RedFox")
+SettingsCard {
+TweakSwitchRow(
+title = "Автоперевод чатов (Mategram / NekoX)",
+subtitle = "Мгновенный перевод иностранных сообщений на лету",
+checked = state.autoTranslateForeign,
+onCheckedChange = { v -> RedFoxConfig.update { it.copy(autoTranslateForeign = v) } }
+)
+HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+TweakSwitchRow(
+title = "Живой бар текста (LRCLIB) и волна",
+subtitle = "Синхронный текст песен и волнистый прогресс-бар",
+checked = state.liveLrcLyricsBar,
+onCheckedChange = { v -> RedFoxConfig.update { it.copy(liveLrcLyricsBar = v, wavySeekbar = v) } }
+)
+HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+TweakSwitchRow(
+title = "Система плагинов (.rfplugin)",
+subtitle = "Разрешить установку скриптов и тем из чатов",
+checked = state.pluginsEnabled,
+onCheckedChange = { v -> RedFoxConfig.update { it.copy(pluginsEnabled = v) } }
+)
+}
+}
+item { Spacer(modifier = Modifier.height(24.dp)) }
+}
+}
+}
 @Composable
 private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 8.dp, bottom = 6.dp)
-    )
+Text(
+text = text,
+style = MaterialTheme.typography.titleSmall,
+color = MaterialTheme.colorScheme.primary,
+fontWeight = FontWeight.SemiBold,
+modifier = Modifier.padding(start = 8.dp, bottom = 6.dp)
+)
 }
-
 @Composable
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(content = content)
-    }
+Surface(
+shape = RoundedCornerShape(24.dp),
+color = MaterialTheme.colorScheme.surfaceContainerLow,
+modifier = Modifier.fillMaxWidth()
+) {
+Column(content = content)
 }
-
+}
 @Composable
 private fun TweakSwitchRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+title: String,
+subtitle: String,
+checked: Boolean,
+onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
+Row(
+modifier = Modifier
+.fillMaxWidth()
+.clickable { onCheckedChange(!checked) }
+.padding(horizontal = 16.dp, vertical = 14.dp),
+verticalAlignment = Alignment.CenterVertically
+) {
+Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+Spacer(modifier = Modifier.height(2.dp))
+Text(
+text = subtitle,
+style = MaterialTheme.typography.bodySmall,
+color = MaterialTheme.colorScheme.onSurfaceVariant
+)
+}
+Switch(checked = checked, onCheckedChange = onCheckedChange)
+}
 }
