@@ -12,7 +12,7 @@
         tools:replace="android:label,android:theme">
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.redfox.gram.MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mnc|colorMode|density|fontScale|fontWeightAdjustment|keyboard|layoutDirection|locale|mcc|navigation|smallestScreenSize|touchscreen|uiMode">
             <intent-filter>
