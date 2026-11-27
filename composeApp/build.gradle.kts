@@ -61,6 +61,14 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1) + 100
         versionName = "0.2-M3E"
     }
+    buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("redfoxUnified")
+        }
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("redfoxUnified")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
