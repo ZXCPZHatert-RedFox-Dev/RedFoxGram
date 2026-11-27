@@ -181,7 +181,11 @@ _connectionStatus.value = deliveryHint
 RedFoxAuthManager.setDeliveryHint(deliveryHint)
 RedFoxAuthManager.moveToStep(AuthStep.CODE)
 }
-is AuthorizationStateWaitPassword -> {
+is AuthorizationStateWaitOtherDeviceConfirmation -> {
+                _qrLoginLink.value = state.link
+                _connectionStatus.value = "Отсканируйте QR-код с другого устройства Telegram"
+            }
+            is AuthorizationStateWaitPassword -> {
 _connectionStatus.value = "Требуется облачный пароль (2FA)"
 RedFoxAuthManager.moveToStep(AuthStep.PASSWORD_2FA)
 }
@@ -303,7 +307,35 @@ timeText = "TG",
 isDeletedSaved = msg.id in deletedMessageIds
 )
 }
-fun sendPhoneNumber(phone: String) {
+
+    private val _qrLoginLink = MutableStateFlow<String?>(null)
+    val qrLoginLink = _qrLoginLink.asStateFlow()
+
+    fun requestQrLogin() {
+        scope.launch {
+            val tdl = client ?: return@launch
+            _connectionStatus.value = "Генерация QR-кода для входа..."
+            val res = tdl.requestQrCodeAuthentication(otherUserIds = longArrayOf())
+            if (res is TdlResult.Failure) {
+                RedFoxAuthManager.setAuthError("Ошибка QR: ${res.message}")
+            }
+        }
+    }
+
+    suspend fun testProxyWithTdlib(node: ProxyNode): Int {
+        val tdl = client ?: return -1
+        val proxyType = when (node.protocol) {
+            ProxyProtocol.MTPROTO -> ProxyTypeMtproto(secret = node.secret)
+            ProxyProtocol.SOCKS5 -> ProxyTypeSocks5(username = "", password = "")
+        }
+        val addRes = tdl.addProxy(server = node.host, port = node.port, enable = false, type = proxyType)
+        val proxyObj = (addRes as? TdlResult.Success)?.result ?: return -1
+        val pingRes = tdl.pingProxy(proxyId = proxyObj.id)
+        val seconds = (pingRes as? TdlResult.Success)?.result?.seconds ?: return -1
+        return (seconds * 1000.0).toInt().coerceAtLeast(1)
+    }
+
+    fun sendPhoneNumber(phone: String) {
 scope.launch {
 val tdl = client ?: return@launch
 val authSettings = PhoneNumberAuthenticationSettings(

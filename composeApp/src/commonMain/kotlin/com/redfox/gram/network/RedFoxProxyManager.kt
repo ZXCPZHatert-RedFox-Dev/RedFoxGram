@@ -104,7 +104,8 @@ object RedFoxProxyManager {
         _state.update { it.copy(isCheckingPing = true, statusNote = "Замер TCP-пинга серверов...") }
         scope.launch {
             val tested = _state.value.nodes.map { node ->
-                val ms = measureTcpPing(node.host, node.port)
+                val tdMs = RedFoxTdEngine.testProxyWithTdlib(node)
+                val ms = if (tdMs > 0) tdMs else measureTcpPing(node.host, node.port)
                 node.copy(pingMs = ms)
             }
             val alive = tested.filter { it.pingMs > 0 }.sortedBy { it.pingMs }
@@ -138,6 +139,8 @@ object RedFoxProxyManager {
         scope.launch {
             val candidates = mutableListOf<ProxyNode>()
             val sources = listOf(
+                "https://githubusercontent.com",
+                "https://jsdelivr.net",
                 "https://jsdelivr.net",
                 "https://jsdelivr.net",
                 "https://jsdelivr.net",
@@ -195,7 +198,8 @@ if (candidates.isEmpty()) {
 candidates.addAll(fallbackPublicNodes)
 }
 val checked = candidates.map { node ->
-node.copy(pingMs = measureTcpPing(node.host, node.port))
+val tdMs = RedFoxTdEngine.testProxyWithTdlib(node)
+                node.copy(pingMs = if (tdMs > 0) tdMs else measureTcpPing(node.host, node.port))
 }
 val alive = checked.filter { it.pingMs > 0 }.sortedBy { it.pingMs }
 val resultList = if (alive.isNotEmpty()) alive else checked
