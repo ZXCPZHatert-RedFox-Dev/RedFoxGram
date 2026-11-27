@@ -11533,6 +11533,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean sendTyping(long dialogId, long threadMsgId, int action, String emojicon, int classGuid) {
+        if (com.redfox.gram.bridge.RedFoxBridge.shouldBlockTypingStatus()) { return false; }
         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
             return false;
         }
@@ -14897,6 +14898,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void markDialogAsRead(long dialogId, int maxPositiveId, int maxNegativeId, int maxDate, boolean popup, long threadId, int countDiff, boolean readNow, int scheduledCount) {
+        if (com.redfox.gram.bridge.RedFoxBridge.shouldBlockReadReceipt()) { return; }
         boolean createReadTask;
 
         if (threadId != 0) {
