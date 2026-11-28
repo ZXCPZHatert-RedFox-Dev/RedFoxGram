@@ -151,6 +151,21 @@ fun RedFoxTweaksScreen(
                         )
                     }
                     item {
+                        var lockTimeoutMin by remember { mutableStateOf(5) }
+                        Surface(
+                            shape = RoundedCornerShape(22.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                lockTimeoutMin = when (lockTimeoutMin) { 0 -> 1; 1 -> 5; 5 -> 15; else -> 0 }
+                            }
+                        ) {
+                            Row(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("Не спрашивать повторно", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                Text(if (lockTimeoutMin == 0) "Выкл" else "$lockTimeoutMin мин.", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    item {
                         Text("Виброотклик", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
                     }
                     item {
