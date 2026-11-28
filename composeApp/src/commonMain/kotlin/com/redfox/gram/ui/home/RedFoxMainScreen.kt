@@ -1,5 +1,4 @@
 package com.redfox.gram.ui.home
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -19,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,113 +34,125 @@ import com.redfox.gram.ui.player.LiveLrcMiniBar
 import com.redfox.gram.ui.player.RedFoxFullPlayerScreen
 import com.redfox.gram.ui.proxy.RedFoxProxyScreen
 import com.redfox.gram.ui.settings.RedFoxTweaksScreen
-
 data class ChatPreview(
-    val id: Long,
-    val title: String,
-    val lastMessage: String,
-    val time: String,
-    val unreadCount: Int = 0,
-    val isDeletedSaved: Boolean = false,
-    val translatedTag: String? = null
+val id: Long,
+val title: String,
+val lastMessage: String,
+val time: String,
+val unreadCount: Int = 0,
+val isDeletedSaved: Boolean = false,
+val translatedTag: String? = null
 )
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedFoxMainScreen() {
-    val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
-    val realChats by RedFoxBridge.liveChats.collectAsState()
-    val channelPosts by RedFoxTdEngine.channelFeedPosts.collectAsState()
-    val syncedFolders by RedFoxTdEngine.telegramFolders.collectAsState()
-    val activeFolderChats by RedFoxTdEngine.folderChats.collectAsState()
-    val proxyState by RedFoxProxyManager.state.collectAsState()
-
-    var showTweaks by remember { mutableStateOf(false) }
-    var showFullPlayer by remember { mutableStateOf(false) }
-    var showProxyHub by remember { mutableStateOf(false) }
-    var openedChat by remember { mutableStateOf<ChatPreview?>(null) }
-    var isPlaying by remember { mutableStateOf(true) }
-    var avatarStyle by remember { mutableStateOf(ExpressiveAvatarStyle.FLOWER_12) }
-
-    // -1 = Все чаты, -2 = Лента каналов, > 0 = реальный folderId из аккаунта Telegram
-    var selectedTabId by remember { mutableStateOf(-1) }
-
-    LaunchedEffect(Unit) {
-        RedFoxTdEngine.refreshChatsNow()
-    }
-
-    if (showProxyHub) {
-        RedFoxProxyScreen(onBack = { showProxyHub = false })
-        return
-    }
-    if (showTweaks) {
-        RedFoxTweaksScreen(onBack = { showTweaks = false })
-        return
-    }
-    if (showFullPlayer) {
-        RedFoxFullPlayerScreen(
-            trackTitle = "Midnight City (M3E Remix)",
-            artist = "RedFox Audio",
-            isPlaying = isPlaying,
-            onTogglePlay = { isPlaying = !isPlaying },
-            onBack = { showFullPlayer = false }
-        )
-        return
-    }
-    openedChat?.let { activeChat ->
-        RedFoxChatScreen(
-            chat = activeChat,
-            onBack = { openedChat = null }
-        )
-        return
-    }
-
-    val fallbackDemoChats = remember {
-        listOf(
-            ChatPreview(
-                id = 1,
-                title = "Загрузка реальных чатов TDLib...",
-                lastMessage = "Нажмите кнопку ↻ или подождите пару секунд",
-                time = "Сейчас",
-                unreadCount = 1
-            )
-        )
-    }
-
-    val baseChats = if (realChats.isNotEmpty()) realChats else fallbackDemoChats
-    val displayedChats = when {
-        selectedTabId == -1 -> baseChats
-        selectedTabId > 0 -> activeFolderChats
-        else -> emptyList()
-    }
-
-    Scaffold(
-        topBar = {
-            Column {
-                CenterAlignedTopAppBar(
-                    navigationIcon = {
-                        TextButton(onClick = { showProxyHub = true }) {
-                            Text(
-                                text = if (proxyState.enabled) "Shield ON" else "Shield",
-                                fontWeight = FontWeight.Bold,
-                                color = if (proxyState.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "RedFoxGram",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                modifier = Modifier.clickable {
-                                    val allStyles = ExpressiveAvatarStyle.entries
-
+val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
+val realChats by RedFoxBridge.liveChats.collectAsState()
+val channelPosts by RedFoxTdEngine.channelFeedPosts.collectAsState()
+val syncedFolders by RedFoxTdEngine.telegramFolders.collectAsState()
+val activeFolderChats by RedFoxTdEngine.folderChats.collectAsState()
+val proxyState by RedFoxProxyManager.state.collectAsState()
+val networkBanner by RedFoxTdEngine.networkBanner.collectAsState()
+val isNetworkReady by RedFoxTdEngine.isNetworkReady.collectAsState()
+var showTweaks by remember { mutableStateOf(false) }
+var showFullPlayer by remember { mutableStateOf(false) }
+var showProxyHub by remember { mutableStateOf(false) }
+var openedChat by remember { mutableStateOf<ChatPreview?>(null) }
+var isPlaying by remember { mutableStateOf(true) }
+var avatarStyle by remember { mutableStateOf(ExpressiveAvatarStyle.FLOWER_12) }
+var selectedTabId by remember { mutableStateOf(-1) }
+LaunchedEffect(Unit) {
+RedFoxTdEngine.refreshChatsNow()
+}
+if (showProxyHub) {
+RedFoxProxyScreen(onBack = { showProxyHub = false })
+return
+}
+if (showTweaks) {
+RedFoxTweaksScreen(onBack = { showTweaks = false })
+return
+}
+if (showFullPlayer) {
+RedFoxFullPlayerScreen(
+trackTitle = "Midnight City (M3E Remix)",
+artist = "RedFox Audio",
+isPlaying = isPlaying,
+onTogglePlay = { isPlaying = !isPlaying },
+onBack = { showFullPlayer = false }
+)
+return
+}
+openedChat?.let { activeChat ->
+RedFoxChatScreen(
+chat = activeChat,
+onBack = { openedChat = null }
+)
+return
+}
+val fallbackDemoChats = remember {
+listOf(
+ChatPreview(
+id = 1,
+title = "Загрузка реальных чатов TDLib...",
+lastMessage = "Нажмите кнопку ↻ или подождите пару секунд",
+time = "Сейчас",
+unreadCount = 1
+)
+)
+}
+val baseChats = if (realChats.isNotEmpty()) realChats else fallbackDemoChats
+val displayedChats = when {
+selectedTabId == -1 -> baseChats
+selectedTabId > 0 -> activeFolderChats
+else -> emptyList()
+}
+Scaffold(
+topBar = {
+Column {
+CenterAlignedTopAppBar(
+navigationIcon = {
+TextButton(onClick = { showProxyHub = true }) {
+Text(
+text = if (proxyState.enabled) "Shield ON" else "Shield",
+fontWeight = FontWeight.Bold,
+color = if (proxyState.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+)
+}
+},
+title = {
+Row(verticalAlignment = Alignment.CenterVertically) {
+if (!isNetworkReady) {
+CircularProgressIndicator(
+modifier = Modifier.size(16.dp),
+strokeWidth = 2.dp,
+color = MaterialTheme.colorScheme.primary
+)
+Spacer(Modifier.width(8.dp))
+Text(
+text = networkBanner,
+style = MaterialTheme.typography.titleMedium,
+fontWeight = FontWeight.Bold,
+color = MaterialTheme.colorScheme.primary
+)
+} else {
+Text(
+"RedFoxGram",
+style = MaterialTheme.typography.titleLarge,
+fontWeight = FontWeight.ExtraBold
+)
+Spacer(Modifier.width(4.dp))
+Text(
+text = "✓",
+style = MaterialTheme.typography.titleMedium,
+fontWeight = FontWeight.ExtraBold,
+color = Color(0xFF4CAF50)
+)
+Spacer(Modifier.width(6.dp))
+Surface(
+shape = CircleShape,
+color = MaterialTheme.colorScheme.secondaryContainer,
+modifier = Modifier.clickable {
+val allStyles = ExpressiveAvatarStyle.entries
 avatarStyle = allStyles[(avatarStyle.ordinal + 1) % allStyles.size]
 }
 ) {
@@ -153,6 +165,7 @@ color = MaterialTheme.colorScheme.onSecondaryContainer
 )
 }
 }
+}
 },
 actions = {
 TextButton(onClick = { RedFoxTdEngine.refreshChatsNow() }) {
@@ -160,7 +173,6 @@ Text("↻", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeigh
 }
 }
 )
-// Синхронизированные папки из вашего аккаунта Telegram + Лента каналов (Hortay)
 Row(
 modifier = Modifier
 .fillMaxWidth()

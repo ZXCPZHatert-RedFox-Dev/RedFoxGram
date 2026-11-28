@@ -18,11 +18,6 @@ import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 import kotlin.concurrent.thread
 
-/**
- * Встроенный движок tg-ws-proxy:
- * Поднимает локальный SOCKS5-мост на 127.0.0.1:10809 и туннелирует трафик TDLib
- * в защищённый WebSocket (wss://kws*.web.telegram.org/apiws) в обход блокировок MTProto.
- */
 object RedFoxTgWsProxy {
     const val LOCAL_PORT = 10809
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -61,7 +56,6 @@ object RedFoxTgWsProxy {
             val cIn = client.getInputStream()
             val cOut = client.getOutputStream()
 
-            // 1. SOCKS5 Greeting
             val ver = cIn.read()
             if (ver != 0x05) {
                 client.close()
@@ -72,10 +66,9 @@ object RedFoxTgWsProxy {
             cOut.write(byteArrayOf(0x05, 0x00))
             cOut.flush()
 
-            // 2. SOCKS5 CONNECT Request
             val reqVer = cIn.read()
             val cmd = cIn.read()
-            cIn.read() // RSV
+            cIn.read()
             val atyp = cIn.read()
             if (reqVer != 0x05 || cmd != 0x01) {
                 client.close()
@@ -86,7 +79,7 @@ object RedFoxTgWsProxy {
                 0x01 -> {
                     val ip = ByteArray(4)
                     readFully(cIn, ip)
-                    "${ip[0].toInt() and 0xFF}.${ip[1].toInt() and 0xFF}.${ip[2].toInt() and 0xFF}.${ip[3].toInt() and 0xFF}"
+                    "${ip.component1().toInt() and 0xFF}.${ip.component2().toInt() and 0xFF}.${ip.component3().toInt() and 0xFF}.${ip.component4().toInt() and 0xFF}"
                 }
                 0x03 -> {
                     val len = cIn.read()
@@ -104,14 +97,10 @@ object RedFoxTgWsProxy {
                     return
                 }
             }
-            val portHi = cIn.read()
-            val portLo = cIn.read()
-            val targetPort = (portHi shl 8) or portLo
+            cIn.read()
+            cIn.read()
 
-            // Маппинг DC Telegram на соответствующие WebSocket-шлюзы kws1..kws5.web.telegram.org
             val wsHost = mapDcToWsGateway(targetHost)
-
-            // 3. Устанавливаем WSS-соединение (TLS + HTTP Upgrade WebSocket binary)
             val sslFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
             val tlsSocket = sslFactory.createSocket(wsHost, 443) as SSLSocket
             tlsSocket.tcpNoDelay = true
@@ -139,7 +128,6 @@ object RedFoxTgWsProxy {
             wsOut.write(upgradeReq.toByteArray(Charsets.UTF_8))
             wsOut.flush()
 
-            // Читаем HTTP 101 Switching Protocols
             val headerBuf = StringBuilder()
             while (!headerBuf.endsWith("\r\n\r\n")) {
                 val b = wsIn.read()
@@ -152,11 +140,9 @@ object RedFoxTgWsProxy {
                 return
             }
 
-            // Отправляем SOCKS5 Success клиенту TDLib
             cOut.write(byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
             cOut.flush()
 
-            // 4. Двусторонний мост: TDLib TCP <-> Masked WebSocket Binary Frames
             val t1 = thread(isDaemon = true) {
                 try {
                     val buf = ByteArray(16384)
@@ -205,7 +191,7 @@ object RedFoxTgWsProxy {
 
     private fun sendWsBinaryFrame(out: OutputStream, data: ByteArray, length: Int, rng: SecureRandom) {
         synchronized(out) {
-            out.write(0x82) // FIN + Binary opcode
+            out.write(0x82)
             when {
                 length <= 125 -> out.write(0x80 or length)
                 length <= 65535 -> {
@@ -223,7 +209,7 @@ object RedFoxTgWsProxy {
             out.write(mask)
             val masked = ByteArray(length)
             for (i in 0 until length) {
-                masked[i] = (data[i].toInt() xor mask[i and 3].toInt()).toByte()
+                masked.set(i, (data.get(i).toInt() xor mask.get(i and 3).toInt()).toByte())
             }
             out.write(masked)
             out.flush()
@@ -245,12 +231,12 @@ object RedFoxTgWsProxy {
             repeat(8) { len = (len shl 8) or (input.read().toLong() and 0xFF) }
         }
         val mask = if (masked) ByteArray(4).also { readFully(input, it) } else null
-        if (opcode == 0x08) return null // Close frame
+        if (opcode == 0x08) return null
         val payload = ByteArray(len.toInt())
         readFully(input, payload)
         if (mask != null) {
             for (i in payload.indices) {
-                payload[i] = (payload[i].toInt() xor mask[i and 3].toInt()).toByte()
+                payload.set(i, (payload.get(i).toInt() xor mask.get(i and 3).toInt()).toByte())
             }
         }
         return if (opcode == 0x02 || opcode == 0x01) payload else ByteArray(0)
@@ -260,9 +246,8 @@ object RedFoxTgWsProxy {
         var off = 0
         while (off < buf.size) {
             val r = input.read(buf, off, buf.size - off)
-
-if (r <= 0) throw java.io.EOFException()
-off += r
-}
-}
+            if (r <= 0) throw java.io.EOFException()
+            off += r
+        }
+    }
 }

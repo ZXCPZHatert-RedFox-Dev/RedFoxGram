@@ -25,6 +25,15 @@ object RedFoxTdEngine {
     private val _connectionStatus = MutableStateFlow("Ожидание запуска...")
     val connectionStatus = _connectionStatus.asStateFlow()
 
+    private val _networkBanner = MutableStateFlow("Соединение...")
+    val networkBanner = _networkBanner.asStateFlow()
+
+    private val _isNetworkReady = MutableStateFlow(false)
+    val isNetworkReady = _isNetworkReady.asStateFlow()
+
+    private val _lastReadOutboxMap = MutableStateFlow<Map<Long, Long>>(emptyMap())
+    val lastReadOutboxMap = _lastReadOutboxMap.asStateFlow()
+
     data class LiveMessageItem(
         val id: Long,
         val senderName: String,
@@ -32,7 +41,8 @@ object RedFoxTdEngine {
         val isOutgoing: Boolean,
         val timeText: String,
         val isDeletedSaved: Boolean = false,
-        val isEdited: Boolean = false
+        val isEdited: Boolean = false,
+        val isSentToServer: Boolean = true
     )
 
     private val _activeChatMessages = MutableStateFlow<List<LiveMessageItem>>(emptyList())
@@ -69,6 +79,52 @@ object RedFoxTdEngine {
                             TelegramFolderTab(id = info.id, title = info.name.text.text)
                         }
                         _telegramFolders.value = synced
+                    }
+                }
+
+                // Слушатели статуса сети (Соединение / Обновление / ✓) и галочек прочтения
+                launch {
+                    tdl.connectionStateUpdates.collect { upd ->
+                        when (upd.state) {
+                            is ConnectionStateWaitingForNetwork -> {
+                                _isNetworkReady.value = false
+                                _networkBanner.value = "Ожидание сети..."
+                            }
+                            is ConnectionStateConnectingToProxy -> {
+                                _isNetworkReady.value = false
+                                _networkBanner.value = "Подключение к прокси..."
+                            }
+                            is ConnectionStateConnecting -> {
+                                _isNetworkReady.value = false
+                                _networkBanner.value = "Соединение..."
+                            }
+                            is ConnectionStateUpdating -> {
+                                _isNetworkReady.value = false
+                                _networkBanner.value = "Обновление..."
+                            }
+                            is ConnectionStateReady -> {
+                                _isNetworkReady.value = true
+                                _networkBanner.value = "✓"
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+                launch {
+                    tdl.chatReadOutboxUpdates.collect { upd ->
+                        _lastReadOutboxMap.update { it + (upd.chatId to upd.lastReadOutboxMessageId) }
+                    }
+                }
+                launch {
+                    tdl.messageSendSucceededUpdates.collect { upd ->
+                        val msg = upd.message
+                        if (msg.chatId == currentOpenedChatId) {
+                            _activeChatMessages.update { list ->
+                                list.map {
+                                    if (it.id == upd.oldMessageId) it.copy(id = msg.id, isSentToServer = true) else it
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -254,7 +310,11 @@ currentOpenedChatId = chatId
 _activeChatMessages.value = emptyList()
 scope.launch {
 val tdl = client ?: return@launch
-val histRes = tdl.getChatHistory(
+val chatObj = (tdl.getChat(chatId = chatId) as? TdlResult.Success)?.result
+            if (chatObj != null) {
+                _lastReadOutboxMap.update { it + (chatId to chatObj.lastReadOutboxMessageId) }
+            }
+            val histRes = tdl.getChatHistory(
 chatId = chatId,
 fromMessageId = 0L,
 offset = 0,

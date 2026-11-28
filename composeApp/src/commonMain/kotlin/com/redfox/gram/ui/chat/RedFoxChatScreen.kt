@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.redfox.gram.config.RedFoxConfig
@@ -25,6 +26,8 @@ onBack: () -> Unit
 ) {
 val settings by RedFoxConfig.state.collectAsState()
 val liveMessages by RedFoxTdEngine.activeChatMessages.collectAsState()
+val lastReadOutboxMap by RedFoxTdEngine.lastReadOutboxMap.collectAsState()
+val lastReadOutboxId = lastReadOutboxMap.get(chat.id) ?: 0L
 var inputText by remember { mutableStateOf("") }
 var inspectedMessage by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
 var uploadingFileName by remember { mutableStateOf<String?>(null) }
@@ -53,7 +56,14 @@ Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
 Text("Chat ID: ${chat.id}", style = MaterialTheme.typography.bodySmall)
 Text("Message ID: ${msg.id}", style = MaterialTheme.typography.bodySmall)
 Text("Направление: ${if (msg.isOutgoing) "Исходящее" else "Входящее"}", style = MaterialTheme.typography.bodySmall)
-Text("Дата-центр: DC2 / MTProto Fake-TLS", style = MaterialTheme.typography.bodySmall)
+if (msg.isOutgoing) {
+val readStatus = when {
+!msg.isSentToServer -> "Отправляется на сервер (🕒)"
+msg.id <= lastReadOutboxId -> "Прочитано собеседником (✓✓)"
+else -> "Доставлено на сервер (✓)"
+}
+Text("Статус: $readStatus", style = MaterialTheme.typography.bodySmall)
+}
 HorizontalDivider()
 Text(msg.text, style = MaterialTheme.typography.bodyMedium)
 }
@@ -228,6 +238,25 @@ MaterialTheme.colorScheme.onPrimaryContainer
 MaterialTheme.colorScheme.onSurface
 }
 )
+}
+if (msg.isOutgoing) {
+val isRead = msg.isSentToServer && msg.id <= lastReadOutboxId
+val checkSymbol = when {
+!msg.isSentToServer -> "🕒"
+isRead -> "✓✓"
+else -> "✓"
+}
+Row(
+modifier = Modifier.align(Alignment.End).padding(top = 2.dp),
+verticalAlignment = Alignment.CenterVertically
+) {
+Text(
+text = checkSymbol,
+style = MaterialTheme.typography.labelSmall,
+fontWeight = FontWeight.Bold,
+color = if (isRead) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+)
+}
 }
 }
 }
