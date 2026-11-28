@@ -244,7 +244,7 @@ Text("Message ID: ${msg.id}", style = MaterialTheme.typography.bodySmall)
 Text("Направление: ${if (msg.isOutgoing) "Исходящее" else "Входящее"}", style = MaterialTheme.typography.bodySmall)
 if (msg.isOutgoing) {
 val readStatus = when {
-!msg.isSentToServer -> "Отправляется на сервер (🕒)"
+!msg.isSentToServer -> "Отправляется на сервер (◷)"
 msg.id <= lastReadOutboxId -> "Прочитано собеседником (✓✓)"
 else -> "Доставлено на сервер (✓)"
 }
@@ -615,7 +615,7 @@ color = MaterialTheme.colorScheme.onSurfaceVariant
 if (msg.isOutgoing) {
 val isRead = msg.isSentToServer && msg.id <= lastReadOutboxId
 val checkSymbol = when {
-!msg.isSentToServer -> "🕒"
+!msg.isSentToServer -> "◷"
 isRead -> "✓✓"
 else -> "✓"
 }
