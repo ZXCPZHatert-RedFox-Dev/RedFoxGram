@@ -5,53 +5,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-enum class ClientPreset(val title: String, val badge: String, val description: String) {
-    ULTIMATE("RedFox Ultimate", "ALL-IN-ONE M3E", "Все фичи Opexgram, AyuGram, Cherrygram, Hortay, MonoGram, extera + M3E"),
-    OPEX_FORTRESS("Opexgram Fortress", "OPEX STEALTH", "Локальный пароль-маскировка, инспектор DC/ID, анти-скриншот и фильтр спама"),
-    AYU_STEALTH("AyuGram Stealth", "GHOST & HISTORY", "Максимальный призрак, анти-удаление и локальная история правок"),
-    CHERRY_EXTERA("Cherrygram & extera", "CHATS & MEDIA", "Пересылка без автора, перемотка кружочков, плагины .rfplugin"),
-    HORTAY_MONO("Hortay & MonoGram", "PURE M3E FEED", "Лента каналов в стиле M3E, пружинная физика и дизайн Material 3"),
-    MATE_MATERIAL("Mategram & Materialgram", "TOOLS & ADMIN", "Автоперевод, быстрое меню админа, массовая очистка >100 сообщ."),
-    NEKO_FORK("NekoX Fork", "PROXY & ID", "Умная ротация прокси, показ ID/DC и расширенные настройки")
-}
-
 data class RedFoxSettingsState(
-    val activePreset: ClientPreset = ClientPreset.ULTIMATE,
-    // --- Opexgram (Безопасность, инспектор, фильтры) ---
-    val opexFakePasscodeMask: Boolean = true,
-    val opexMessageInspector: Boolean = true,
-    val opexKeywordSpamFilter: Boolean = true,
-    val opexAntiScreenshotAlert: Boolean = true,
-    val opexShowClientDeviceIcon: Boolean = true,
-    val opexQuickSaveToFavorites: Boolean = true,
-    // --- AyuGram (Стелс и история) ---
     val ghostReadMessages: Boolean = true,
     val ghostReadStories: Boolean = true,
     val hideTypingStatus: Boolean = true,
-    val forceOffline: Boolean = false,
     val antiDeleteMessages: Boolean = true,
-    val saveEditHistory: Boolean = true,
-    // --- Cherrygram & exteraGram (Удобство и медиа) ---
     val quickForwardNoQuote: Boolean = true,
     val seekableVideoNotes: Boolean = true,
-    val sendHighResPhotos: Boolean = true,
-    val pluginsEnabled: Boolean = true,
-    val disableSponsoredAds: Boolean = true,
-    val hidePhoneNumber: Boolean = true,
-    // --- Hortay, MonoGram & Materialgram (M3E и лента) ---
-    val channelFeedMode: Boolean = false,
     val springPhysicsScroll: Boolean = true,
-    val googleSansFont: Boolean = true,
-    val adminQuickMenu: Boolean = true,
-    // --- Mategram, NekoX & RedFox (Перевод, прокси, плеер) ---
-    val autoTranslateForeign: Boolean = true,
-    val showUserIdsAndDc: Boolean = true,
-    val smartProxyRotation: Boolean = true,
     val liveLrcLyricsBar: Boolean = true,
     val pinLockEnabled: Boolean = false,
     val pinCode: String = "0000",
     val hiddenChatIds: Set<Long> = emptySet(),
-    val wavySeekbar: Boolean = true
+    val themePreset: String = "MONET",
+    val bubbleCornerDp: Int = 22,
+    val chatFontScale: Float = 1.0f,
+    val syncedTelegramAccentHex: Long = 0L,
+    val syncedThemeName: String = "",
+    val antiScreenshotEnabled: Boolean = false,
+    val ambientPhotoGlow: Boolean = true
 )
 
 object RedFoxConfig {
@@ -62,58 +34,46 @@ object RedFoxConfig {
         _state.update(transform)
     }
 
-    fun applyPreset(preset: ClientPreset) {
-        _state.update {
-            when (preset) {
-                ClientPreset.ULTIMATE -> RedFoxSettingsState(activePreset = preset)
-                ClientPreset.OPEX_FORTRESS -> it.copy(
-                    activePreset = preset,
-                    opexFakePasscodeMask = true,
-                    opexMessageInspector = true,
-                    opexKeywordSpamFilter = true,
-                    opexAntiScreenshotAlert = true,
-                    opexShowClientDeviceIcon = true,
-                    opexQuickSaveToFavorites = true,
-                    ghostReadMessages = true,
-                    antiDeleteMessages = true
-                )
-                ClientPreset.AYU_STEALTH -> it.copy(
-                    activePreset = preset,
-                    ghostReadMessages = true,
-                    ghostReadStories = true,
-                    hideTypingStatus = true,
-                    antiDeleteMessages = true,
-                    saveEditHistory = true
-                )
-                ClientPreset.CHERRY_EXTERA -> it.copy(
-                    activePreset = preset,
-                    ghostReadMessages = false,
-                    quickForwardNoQuote = true,
-                    seekableVideoNotes = true,
-                    sendHighResPhotos = true,
-                    pluginsEnabled = true,
-                    disableSponsoredAds = true
-                )
-                ClientPreset.HORTAY_MONO -> it.copy(
-                    activePreset = preset,
-                    channelFeedMode = true,
-                    springPhysicsScroll = true,
-                    googleSansFont = true,
-                    wavySeekbar = true
-                )
-                ClientPreset.MATE_MATERIAL -> it.copy(
-                    activePreset = preset,
-                    autoTranslateForeign = true,
-                    adminQuickMenu = true,
-                    googleSansFont = true
-                )
-                ClientPreset.NEKO_FORK -> it.copy(
-                    activePreset = preset,
-                    autoTranslateForeign = true,
-                    showUserIdsAndDc = true,
-                    smartProxyRotation = true
-                )
-            }
+    fun exportSettingsOpex(): String {
+        val st = _state.value
+        return buildString {
+            appendLine("# RedFoxGram / Opexgram Backup (.opex)")
+            appendLine("ghostReadMessages=${st.ghostReadMessages}")
+            appendLine("hideTypingStatus=${st.hideTypingStatus}")
+            appendLine("antiDeleteMessages=${st.antiDeleteMessages}")
+            appendLine("liveLrcLyricsBar=${st.liveLrcLyricsBar}")
+            appendLine("pinLockEnabled=${st.pinLockEnabled}")
+            appendLine("pinCode=${st.pinCode}")
+            appendLine("themePreset=${st.themePreset}")
+            appendLine("bubbleCornerDp=${st.bubbleCornerDp}")
+            appendLine("chatFontScale=${st.chatFontScale}")
+            appendLine("antiScreenshotEnabled=${st.antiScreenshotEnabled}")
+            appendLine("ambientPhotoGlow=${st.ambientPhotoGlow}")
         }
+    }
+
+    fun importSettingsOpex(raw: String): Boolean {
+        val lines = raw.lines().map { it.trim() }.filter { it.contains("=") && !it.startsWith("#") }
+        if (lines.isEmpty()) return false
+        val map = lines.associate {
+            val idx = it.indexOf('=')
+            it.substring(0, idx).trim() to it.substring(idx + 1).trim()
+        }
+        update { cur ->
+            cur.copy(
+                ghostReadMessages = map.get("ghostReadMessages")?.toBooleanStrictOrNull() ?: cur.ghostReadMessages,
+                hideTypingStatus = map.get("hideTypingStatus")?.toBooleanStrictOrNull() ?: cur.hideTypingStatus,
+                antiDeleteMessages = map.get("antiDeleteMessages")?.toBooleanStrictOrNull() ?: cur.antiDeleteMessages,
+                liveLrcLyricsBar = map.get("liveLrcLyricsBar")?.toBooleanStrictOrNull() ?: cur.liveLrcLyricsBar,
+                pinLockEnabled = map.get("pinLockEnabled")?.toBooleanStrictOrNull() ?: cur.pinLockEnabled,
+                pinCode = map.get("pinCode")?.take(4)?.takeIf { it.length == 4 } ?: cur.pinCode,
+                themePreset = map.get("themePreset") ?: cur.themePreset,
+                bubbleCornerDp = map.get("bubbleCornerDp")?.toIntOrNull() ?: cur.bubbleCornerDp,
+                chatFontScale = map.get("chatFontScale")?.toFloatOrNull() ?: cur.chatFontScale,
+                antiScreenshotEnabled = map.get("antiScreenshotEnabled")?.toBooleanStrictOrNull() ?: cur.antiScreenshotEnabled,
+                ambientPhotoGlow = map.get("ambientPhotoGlow")?.toBooleanStrictOrNull() ?: cur.ambientPhotoGlow
+            )
+        }
+        return true
     }
 }

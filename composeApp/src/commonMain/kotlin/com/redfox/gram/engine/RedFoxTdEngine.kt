@@ -18,6 +18,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 object RedFoxTdEngine {
+    data class CurrentUserProfile(
+        val id: Long = 0L,
+        val fullName: String = "Пользователь RedFoxGram",
+        val username: String = "",
+        val phone: String = "",
+        val avatarPath: String = ""
+    )
+
+    private val _currentUser = MutableStateFlow(CurrentUserProfile())
+    val currentUser = _currentUser.asStateFlow()
+
     data class SyncedTelegramTheme(
         val name: String,
         val primaryColorHex: Long,
@@ -303,6 +314,7 @@ _connectionStatus.value = "Требуется облачный пароль (2FA
 RedFoxAuthManager.moveToStep(AuthStep.PASSWORD_2FA)
 }
 is AuthorizationStateReady -> {
+                                loadCurrentUserProfile()
 _connectionStatus.value = "В сети (Telegram MTProto)"
 RedFoxAuthManager.completeLogin(skip2FA = true)
 loadRealChats(tdl)
@@ -686,6 +698,34 @@ RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message
                     _chatAvatars.update { it + (chatId to dl.local.path) }
                 }
             }
+        }
+    }
+
+    
+    fun loadCurrentUserProfile() {
+        scope.launch {
+            val tdl = client ?: return@launch
+            val me = (tdl.getMe() as? TdlResult.Success)?.result ?: return@launch
+            val name = listOf(me.firstName, me.lastName).filter { it.isNotBlank() }.joinToString(" ").ifBlank { "Telegram User" }
+            val uname = me.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" } ?: ""
+            val phoneStr = if (me.phoneNumber.isNotBlank()) "+${me.phoneNumber}" else ""
+            var avPath = ""
+            val photoFile = me.profilePhoto?.small
+            if (photoFile != null) {
+                if (photoFile.local.isDownloadingCompleted && photoFile.local.path.isNotBlank()) {
+                    avPath = photoFile.local.path
+                } else if (photoFile.id != 0) {
+                    val dl = (tdl.downloadFile(fileId = photoFile.id, priority = 16, offset = 0L, limit = 0L, synchronous = true) as? TdlResult.Success)?.result
+                    if (dl != null && dl.local.path.isNotBlank()) avPath = dl.local.path
+                }
+            }
+            _currentUser.value = CurrentUserProfile(
+                id = me.id,
+                fullName = name,
+                username = uname,
+                phone = phoneStr,
+                avatarPath = avPath
+            )
         }
     }
 
