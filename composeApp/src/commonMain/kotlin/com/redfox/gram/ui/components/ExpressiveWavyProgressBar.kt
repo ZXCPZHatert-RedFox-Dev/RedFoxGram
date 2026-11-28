@@ -8,7 +8,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -24,14 +26,14 @@ fun ExpressiveWavyProgressBar(
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     activeColor: Color = MaterialTheme.colorScheme.primary,
-    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant
+    trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "m3e_wavy_phase")
+    val infiniteTransition = rememberInfiniteTransition(label = "opex_wavy_phase")
     val phase by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = (2.0 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1400, easing = LinearEasing),
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "wave_phase"
@@ -46,38 +48,42 @@ fun ExpressiveWavyProgressBar(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(28.dp)
+            .height(24.dp)
     ) {
         val midY = size.height / 2f
-        val strokePx = 3.5.dp.toPx()
-        val thumbRadius = 6.dp.toPx()
-        val pad = thumbRadius + 2.dp.toPx()
+        val waveStrokePx = 2.2.dp.toPx()
+        val trackStrokePx = 2.dp.toPx()
+        val thumbWidthPx = 3.dp.toPx()
+        val thumbHeightPx = 14.dp.toPx()
+        val pad = thumbWidthPx + 2.dp.toPx()
         val usableWidth = (size.width - pad * 2f).coerceAtLeast(1f)
         val clampedProgress = progress.coerceIn(0f, 1f)
         val activeEndX = pad + usableWidth * clampedProgress
 
-        if (activeEndX + thumbRadius < size.width - pad) {
+        val trackStartX = activeEndX + thumbWidthPx + 3.dp.toPx()
+        if (trackStartX < size.width - pad) {
             drawLine(
                 color = trackColor,
-                start = Offset(activeEndX + thumbRadius + 3.dp.toPx(), midY),
+                start = Offset(trackStartX, midY),
                 end = Offset(size.width - pad, midY),
-                strokeWidth = strokePx,
+                strokeWidth = trackStrokePx,
                 cap = StrokeCap.Round
             )
         }
 
-        val maxAmp = 4.2.dp.toPx() * animatedAmplitudeFactor
-        val wavelengthPx = 28.dp.toPx()
-        val fadeZonePx = 14.dp.toPx()
+        val maxAmp = 2.7.dp.toPx() * animatedAmplitudeFactor
+        val wavelengthPx = 15.dp.toPx()
+        val fadeZonePx = 10.dp.toPx()
+        val waveStopX = (activeEndX - thumbWidthPx - 2.dp.toPx()).coerceAtLeast(pad)
 
         val path = Path()
         var x = pad
-        val step = 1.dp.toPx()
+        val step = 0.8.dp.toPx()
         var first = true
 
-        while (x <= activeEndX) {
+        while (x <= waveStopX) {
             val distFromStart = (x - pad).coerceAtLeast(0f)
-            val distFromEnd = (activeEndX - x).coerceAtLeast(0f)
+            val distFromEnd = (waveStopX - x).coerceAtLeast(0f)
             val edgeEnvelope = minOf(
                 (distFromStart / fadeZonePx).coerceIn(0f, 1f),
                 (distFromEnd / fadeZonePx).coerceIn(0f, 1f)
@@ -94,22 +100,23 @@ fun ExpressiveWavyProgressBar(
             }
             x += step
         }
-        path.lineTo(activeEndX, midY)
+        path.lineTo(waveStopX, midY)
 
         drawPath(
             path = path,
             color = activeColor,
             style = Stroke(
-                width = strokePx,
+                width = waveStrokePx,
                 cap = StrokeCap.Round,
                 join = StrokeJoin.Round
             )
         )
 
-        drawCircle(
+        drawRoundRect(
             color = activeColor,
-            radius = thumbRadius,
-            center = Offset(activeEndX, midY)
+            topLeft = Offset(activeEndX - thumbWidthPx / 2f, midY - thumbHeightPx / 2f),
+            size = Size(thumbWidthPx, thumbHeightPx),
+            cornerRadius = CornerRadius(thumbWidthPx / 2f, thumbWidthPx / 2f)
         )
     }
 }

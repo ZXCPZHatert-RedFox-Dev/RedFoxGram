@@ -1,5 +1,6 @@
 package com.redfox.gram.media
 
+import androidx.compose.ui.graphics.ImageBitmap
 import java.io.File
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
@@ -18,6 +19,8 @@ actual object RedFoxNativeAudioEngine {
         }
     }
 
+    actual fun extractAlbumArt(path: String): ImageBitmap? = null
+
     actual fun togglePlayPause(): Boolean {
         val c = clip ?: return false
         return if (c.isRunning) {
@@ -32,9 +35,7 @@ actual object RedFoxNativeAudioEngine {
     actual fun seekToFraction(fraction: Float) {
         val c = clip ?: return
         val len = c.microsecondLength
-        if (len > 0) {
-            c.microsecondPosition = (len * fraction.coerceIn(0f, 1f)).toLong()
-        }
+        if (len > 0) c.microsecondPosition = (len * fraction.coerceIn(0f, 1f)).toLong()
     }
 
     actual fun getProgressFraction(): Float {
@@ -42,6 +43,9 @@ actual object RedFoxNativeAudioEngine {
         val len = c.microsecondLength
         return if (len > 0) (c.microsecondPosition.toFloat() / len.toFloat()).coerceIn(0f, 1f) else 0f
     }
+
+    actual fun getCurrentPositionMs(): Long = runCatching { (clip?.microsecondPosition ?: 0L) / 1000L }.getOrDefault(0L)
+    actual fun getDurationMs(): Long = runCatching { (clip?.microsecondLength ?: 0L) / 1000L }.getOrDefault(0L)
 
     actual fun stop() {
         runCatching {
