@@ -56,7 +56,11 @@ data class RedFoxSettingsState(
     val cameraEngine: String = "CAMERA2",
     val videoNoteFps: Int = 30,
     val useBackCameraDefault: Boolean = false,
-    val autoCheckUpdates: Boolean = true
+    val autoCheckUpdates: Boolean = true,
+    val sendPhotosUncompressed: Boolean = false,
+    val confirmBeforeCallOrVoice: Boolean = true,
+    val autoTranslateForeign: Boolean = false,
+    val powerSavingMode: Boolean = false
 )
 
 object RedFoxConfig {
