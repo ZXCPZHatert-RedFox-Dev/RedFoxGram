@@ -64,7 +64,7 @@ fun RedFoxTweaksScreen(
 
     if (subScreen == "BOOKMARKS") { RedFoxBookmarksScreen(onBack = { subScreen = "ROOT" }); return }
     if (subScreen in listOf("DEVICES", "LABS")) { RedFoxDevicesAndLabsScreen(mode = subScreen, onBack = { subScreen = "ROOT" }); return }
-    if (subScreen in listOf("PLAYER", "DOWNLOAD", "CAMERA", "OTHER")) { RedFoxMediaAndOtherScreen(section = subScreen, onBack = { subScreen = "ROOT" }); return }
+    if (subScreen in listOf("MEDIA_HUB", "PLAYER", "DOWNLOAD", "CAMERA", "OTHER")) { RedFoxMediaAndOtherScreen(section = subScreen, onBack = { subScreen = "ROOT" }); return }
     if (subScreen == "CHATS_TWEAKS") { RedFoxChatsTweaksScreen(onBack = { subScreen = "ROOT" }); return }
     if (subScreen == "THEMES") {
         RedFoxAppearanceScreen(onBack = { subScreen = "ROOT" })
