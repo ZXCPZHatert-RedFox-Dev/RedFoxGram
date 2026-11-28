@@ -659,6 +659,7 @@ forceRead = true
         }
     }
 
+        fun sendTextMessageWithSelfDestruct(chatId: Long, text: String, replyToMsgId: Long = 0L, ttlSeconds: Int = 0) { if (text.isBlank()) return; scope.launch { val tdl = client ?: return@launch; val ri = if (replyToMsgId != 0L) InputMessageReplyToMessage(messageId = replyToMsgId, quote = null, checklistTaskId = 0) else null; val c = InputMessageText(text = FormattedText(text = text, entities = emptyArray()), linkPreviewOptions = null, clearDraft = true); val res = tdl.sendMessage(chatId = chatId, messageThreadId = 0L, replyTo = ri, options = null, replyMarkup = null, inputMessageContent = c) as? TdlResult.Success; val mid = res?.result?.id ?: 0L; if (ttlSeconds > 0 && mid != 0L) { kotlinx.coroutines.delay(ttlSeconds * 1000L); tdl.deleteMessages(chatId = chatId, messageIds = longArrayOf(mid), revoke = true) } } }
     fun sendTextMessage(chatId: Long, text: String) {
 if (text.isBlank()) return
 scope.launch {
