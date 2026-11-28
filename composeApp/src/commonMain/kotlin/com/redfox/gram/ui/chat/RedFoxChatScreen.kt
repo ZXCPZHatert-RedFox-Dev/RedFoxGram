@@ -268,7 +268,7 @@ Text("Закрыть")
 Scaffold(
 topBar = {
 Column {
-TopAppBar(
+TopAppBar(colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent), 
 title = {
 Column {
 Text(chat.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -440,7 +440,8 @@ topEnd = 22.dp,
 bottomStart = if (msg.isOutgoing) 22.dp else 6.dp,
 bottomEnd = if (msg.isOutgoing) 6.dp else 22.dp
 ),
-color = when {
+border = if (settings.glassMessages && settings.glassLightBorder) androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)) else null,
+                            color = when {
 msg.isDeletedSaved && settings.antiDeleteMessages -> MaterialTheme.colorScheme.errorContainer
 msg.isOutgoing -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (settings.glassMessages) (settings.glassOpacityPercent / 100f) else 1f)
 else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (settings.glassMessages) ((settings.glassOpacityPercent - 4f).coerceAtLeast(25f) / 100f) else 1f)
