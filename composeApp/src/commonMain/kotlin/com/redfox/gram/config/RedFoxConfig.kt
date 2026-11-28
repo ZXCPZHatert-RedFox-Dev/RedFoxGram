@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 data class RedFoxSettingsState(
+    val compactChatList: Boolean = false,
     val ghostReadMessages: Boolean = true,
     val ghostReadStories: Boolean = true,
     val hideTypingStatus: Boolean = true,

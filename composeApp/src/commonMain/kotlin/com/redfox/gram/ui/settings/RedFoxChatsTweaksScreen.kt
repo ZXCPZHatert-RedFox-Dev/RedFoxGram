@@ -581,7 +581,27 @@ Text(label, modifier = Modifier.padding(vertical = 12.dp), textAlign = TextAlign
 }
 }
 }
-item { Spacer(Modifier.height(28.dp)) }
+            item {
+                Surface(
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        RedFoxConfig.update { it.copy(compactChatList = !it.compactChatList) }
+                    }
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Компактный список чатов", style = MaterialTheme.typography.titleMedium)
+                            Text("Уменьшенные отступы и аватарки как в exteraGram", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        ExpressiveSwitch(
+                            checked = settings.compactChatList,
+                            onCheckedChange = { v -> RedFoxConfig.update { it.copy(compactChatList = v) } }
+                        )
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(28.dp)) }
 }
 }
 }
