@@ -87,6 +87,7 @@ fun RedFoxChatScreen(
     var fullscreenPhotoPath by remember { mutableStateOf<String?>(null) }
     var uploadingFileName by remember { mutableStateOf<String?>(null) }
     var vanishingIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var translatedMap by remember { mutableStateOf<Map<Long, String>>(emptyMap()) }
     val listState = rememberLazyListState()
 
     val pickFile = rememberFilePickerLauncher { path, isImage ->

@@ -28,6 +28,7 @@ object RedFoxTdEngine {
     private val _syncedTelegramThemes = MutableStateFlow<List<SyncedTelegramTheme>>(emptyList())
     val syncedTelegramThemes = _syncedTelegramThemes.asStateFlow()
 
+
     private val _searchResults = MutableStateFlow<List<ChatPreview>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
 
