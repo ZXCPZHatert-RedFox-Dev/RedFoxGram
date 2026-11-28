@@ -141,6 +141,16 @@ fun RedFoxTweaksScreen(
                     }
 
                     item {
+                        Text("Истории и архив", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, top = 6.dp))
+                    }
+                    item {
+                        OpexPillSwitch(
+                            title = "Скрыть ленту историй",
+                            checked = settings.hideStoriesFeed,
+                            onCheckedChange = { v -> RedFoxConfig.update { it.copy(hideStoriesFeed = v) } }
+                        )
+                    }
+                    item {
                         Text("Виброотклик", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
                     }
                     item {

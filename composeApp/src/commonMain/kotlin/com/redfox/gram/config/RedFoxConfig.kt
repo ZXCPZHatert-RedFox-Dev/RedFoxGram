@@ -64,7 +64,12 @@ data class RedFoxSettingsState(
     val duoPartnerChatId: Long = 0L,
     val duoPartnerName: String = "",
     val duoStartTimestampMs: Long = 0L,
-    val chatParticleEffect: String = "SAKURA"
+    val chatParticleEffect: String = "SAKURA",
+    val sliderThumbWidthDp: Float = 12f,
+    val sliderGapDp: Float = 12f,
+    val sliderEndDotDp: Float = 8f,
+    val glassSpecularGlare: Boolean = true,
+    val hideStoriesFeed: Boolean = false
 )
 
 object RedFoxConfig {
