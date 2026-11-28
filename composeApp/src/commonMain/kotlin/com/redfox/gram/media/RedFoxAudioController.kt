@@ -274,6 +274,10 @@ object RedFoxAudioController {
                 if (words.isNotEmpty()) {
                     val keyWord = URLEncoder.encode(words.last(), "UTF-8")
                     add("https://lrclib.net")
+                    if (cleanArtist.isNotBlank() && cleanArtist != "RedFox Audio") {
+                        val artAndWord = URLEncoder.encode("$cleanArtist ${words.last()}", "UTF-8")
+                        add("https://lrclib.net")
+                    }
                 }
             }
 

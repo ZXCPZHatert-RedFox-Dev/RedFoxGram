@@ -111,9 +111,10 @@ RedFoxTweaksScreen(onBack = { showTweaks = false })
 return
 }
 if (showFullPlayer) {
+    val activeTrack by com.redfox.gram.media.RedFoxAudioController.track.collectAsState()
 RedFoxFullPlayerScreen(
-trackTitle = "Midnight City (M3E Remix)",
-artist = "RedFox Audio",
+trackTitle = activeTrack.title,
+artist = activeTrack.artist,
 isPlaying = isPlaying,
 onTogglePlay = { isPlaying = !isPlaying },
 onBack = { showFullPlayer = false }
