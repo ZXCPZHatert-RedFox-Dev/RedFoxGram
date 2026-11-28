@@ -22,6 +22,7 @@ object RedFoxTdEngine {
     val chatAvatars = _chatAvatars.asStateFlow()
 
     private val fileIdToChatId = mutableMapOf<Int, Long>()
+    private val fileIdToMsgId = mutableMapOf<Int, Long>()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: TdlClient? = null
@@ -47,7 +48,9 @@ object RedFoxTdEngine {
         val timeText: String,
         val isDeletedSaved: Boolean = false,
         val isEdited: Boolean = false,
-        val isSentToServer: Boolean = true
+        val isSentToServer: Boolean = true,
+        val mediaLocalPath: String = "",
+        val replyToText: String = ""
     )
 
     private val _activeChatMessages = MutableStateFlow<List<LiveMessageItem>>(emptyList())
@@ -375,6 +378,51 @@ forceRead = true
                 replyMarkup = null,
                 inputMessageContent = content
             )
+        }
+    }
+
+    
+    fun sendReplyMessage(chatId: Long, replyToMessageId: Long, text: String) {
+        if (text.isBlank()) return
+        scope.launch {
+            val tdl = client ?: return@launch
+            val content = InputMessageText(
+                text = FormattedText(text = text, entities = emptyArray()),
+                linkPreviewOptions = null,
+                clearDraft = true
+            )
+            val replyTarget = InputMessageReplyToMessage(messageId = replyToMessageId, quote = null, checklistTaskId = 0)
+            tdl.sendMessage(
+                chatId = chatId,
+                messageThreadId = 0L,
+                replyTo = replyTarget,
+                options = null,
+                replyMarkup = null,
+                inputMessageContent = content
+            )
+        }
+    }
+
+    fun editTextMessage(chatId: Long, messageId: Long, newText: String) {
+        if (newText.isBlank()) return
+        scope.launch {
+            val tdl = client ?: return@launch
+            val content = InputMessageText(
+                text = FormattedText(text = newText, entities = emptyArray()),
+                linkPreviewOptions = null,
+                clearDraft = true
+            )
+            tdl.editMessageText(chatId = chatId, messageId = messageId, replyMarkup = null, inputMessageContent = content)
+            _activeChatMessages.update { list ->
+                list.map { if (it.id == messageId) it.copy(text = newText, isEdited = true) else it }
+            }
+        }
+    }
+
+    fun deleteChatMessage(chatId: Long, messageId: Long, revoke: Boolean = true) {
+        scope.launch {
+            client?.deleteMessages(chatId = chatId, messageIds = longArrayOf(messageId), revoke = revoke)
+            _activeChatMessages.update { list -> list.filterNot { it.id == messageId } }
         }
     }
 

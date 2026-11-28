@@ -1,4 +1,10 @@
 package com.redfox.gram.ui.chat
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,46 +16,159 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.redfox.gram.config.RedFoxConfig
 import com.redfox.gram.engine.RedFoxTdEngine
 import com.redfox.gram.media.rememberFilePickerLauncher
 import com.redfox.gram.ui.components.ExpressiveWavyProgressBar
+import com.redfox.gram.ui.components.RedFoxLocalImage
 import com.redfox.gram.ui.home.ChatPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedFoxChatScreen(
-chat: ChatPreview,
-onBack: () -> Unit
+    chat: ChatPreview,
+    onBack: () -> Unit
 ) {
-val settings by RedFoxConfig.state.collectAsState()
-val liveMessages by RedFoxTdEngine.activeChatMessages.collectAsState()
-val lastReadOutboxMap by RedFoxTdEngine.lastReadOutboxMap.collectAsState()
-val lastReadOutboxId = lastReadOutboxMap.get(chat.id) ?: 0L
-var inputText by remember { mutableStateOf("") }
-var inspectedMessage by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
-var uploadingFileName by remember { mutableStateOf<String?>(null) }
-val listState = rememberLazyListState()
-val pickFile = rememberFilePickerLauncher { path, isImage ->
-val name = path.substringAfterLast('/')
-uploadingFileName = name
-RedFoxTdEngine.sendMediaFile(chat.id, path, isImage, inputText)
-inputText = ""
+    val settings by RedFoxConfig.state.collectAsState()
+    val liveMessages by RedFoxTdEngine.activeChatMessages.collectAsState()
+    val lastReadOutboxMap by RedFoxTdEngine.lastReadOutboxMap.collectAsState()
+    val lastReadOutboxId = lastReadOutboxMap.get(chat.id) ?: 0L
+    val uiScope = rememberCoroutineScope()
+
+    var inputText by remember { mutableStateOf("") }
+    var selectedMessage by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
+    var showInspector by remember { mutableStateOf(false) }
+    var replyTarget by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
+    var editingTarget by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
+    var fullscreenPhotoPath by remember { mutableStateOf<String?>(null) }
+    var uploadingFileName by remember { mutableStateOf<String?>(null) }
+    var vanishingIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    val listState = rememberLazyListState()
+
+    val pickFile = rememberFilePickerLauncher { path, isImage ->
+        val name = path.substringAfterLast('/')
+        uploadingFileName = name
+        RedFoxTdEngine.sendMediaFile(chat.id, path, isImage, inputText)
+        inputText = ""
+    }
+
+    LaunchedEffect(chat.id) {
+        RedFoxTdEngine.openChatHistory(chat.id)
+    }
+
+    LaunchedEffect(liveMessages.size) {
+        if (liveMessages.isNotEmpty()) {
+            uploadingFileName = null
+            listState.scrollToItem(liveMessages.size - 1)
+        }
+    }
+
+    // Полноэкранный просмотр фотографии
+    fullscreenPhotoPath?.let { photoPath ->
+        AlertDialog(
+            onDismissRequest = { fullscreenPhotoPath = null },
+            title = { Text("Просмотр фото • Ambient M3E", fontWeight = FontWeight.Bold) },
+            text = {
+                RedFoxLocalImage(
+                    filePath = photoPath,
+                    contentDescription = "Полноэкранное фото",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 240.dp, max = 420.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { fullscreenPhotoPath = null }) {
+                    Text("Закрыть")
+                }
+            }
+        )
+    }
+
+    // Контекстное меню действия над сообщением (Ответить / Редактировать / Удалить / Инспектор)
+    selectedMessage?.let { msg ->
+        if (!showInspector) {
+            AlertDialog(
+                onDismissRequest = { selectedMessage = null },
+                title = { Text("Действия с сообщением", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = msg.text,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        HorizontalDivider()
+                        FilledTonalButton(
+                            onClick = {
+                                replyTarget = msg
+                                editingTarget = null
+                                selectedMessage = null
+
+},
+modifier = Modifier.fillMaxWidth()
+) {
+Text("Ответить (Reply)")
 }
-LaunchedEffect(chat.id) {
-RedFoxTdEngine.openChatHistory(chat.id)
+if (msg.isOutgoing) {
+FilledTonalButton(
+onClick = {
+editingTarget = msg
+replyTarget = null
+inputText = msg.text
+selectedMessage = null
+},
+modifier = Modifier.fillMaxWidth()
+) {
+Text("Редактировать текст")
 }
-LaunchedEffect(liveMessages.size) {
-if (liveMessages.isNotEmpty()) {
-uploadingFileName = null
-listState.scrollToItem(liveMessages.size - 1)
+}
+FilledTonalButton(
+onClick = { showInspector = true },
+modifier = Modifier.fillMaxWidth()
+) {
+Text("Инспектор Opexgram M3E")
+}
+Button(
+onClick = {
+val targetId = msg.id
+selectedMessage = null
+vanishingIds = vanishingIds + targetId
+uiScope.launch {
+delay(360L)
+RedFoxTdEngine.deleteChatMessage(chat.id, targetId, revoke = true)
+}
+},
+colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+modifier = Modifier.fillMaxWidth()
+) {
+Text("Удалить у всех (с распадом)", color = MaterialTheme.colorScheme.onError)
 }
 }
-inspectedMessage?.let { msg ->
+},
+confirmButton = {
+TextButton(onClick = { selectedMessage = null }) {
+Text("Отмена")
+}
+}
+)
+} else {
 AlertDialog(
-onDismissRequest = { inspectedMessage = null },
+onDismissRequest = {
+showInspector = false
+selectedMessage = null
+},
 title = { Text("Инспектор Opexgram M3E", fontWeight = FontWeight.Bold) },
 text = {
 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -69,11 +188,15 @@ Text(msg.text, style = MaterialTheme.typography.bodyMedium)
 }
 },
 confirmButton = {
-TextButton(onClick = { inspectedMessage = null }) {
+TextButton(onClick = {
+showInspector = false
+selectedMessage = null
+}) {
 Text("Закрыть")
 }
 }
 )
+}
 }
 Scaffold(
 topBar = {
@@ -83,7 +206,7 @@ title = {
 Column {
 Text(chat.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
 Text(
-text = "${if (settings.ghostReadMessages) "Призрак ВКЛ" else "В сети"} • Анти-скриншот • Инспектор",
+text = "${if (settings.ghostReadMessages) "Призрак ВКЛ" else "В сети"} • Фото Ambient • Редактор",
 style = MaterialTheme.typography.labelSmall,
 color = MaterialTheme.colorScheme.primary
 )
@@ -124,6 +247,40 @@ Surface(
 color = MaterialTheme.colorScheme.surfaceContainerHigh,
 modifier = Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
 ) {
+Column {
+// Плашка ответа (Reply) или редактирования (Edit) над полем ввода
+val activeBanner = editingTarget ?: replyTarget
+if (activeBanner != null) {
+Row(
+modifier = Modifier
+.fillMaxWidth()
+.background(MaterialTheme.colorScheme.secondaryContainer)
+.padding(horizontal = 16.dp, vertical = 6.dp),
+verticalAlignment = Alignment.CenterVertically
+) {
+Column(modifier = Modifier.weight(1f)) {
+Text(
+text = if (editingTarget != null) "Редактирование сообщения" else "Ответ на сообщение",
+style = MaterialTheme.typography.labelSmall,
+fontWeight = FontWeight.Bold,
+color = MaterialTheme.colorScheme.primary
+)
+Text(
+text = activeBanner.text,
+style = MaterialTheme.typography.bodySmall,
+maxLines = 1,
+overflow = TextOverflow.Ellipsis
+)
+}
+TextButton(onClick = {
+replyTarget = null
+editingTarget = null
+inputText = ""
+}) {
+Text("✕")
+}
+}
+}
 Row(
 modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
 verticalAlignment = Alignment.CenterVertically,
@@ -141,23 +298,35 @@ OutlinedTextField(
 value = inputText,
 onValueChange = { inputText = it },
 modifier = Modifier.weight(1f),
-placeholder = {
-Text(if (settings.hideTypingStatus) "Сообщение..." else "Сообщение...")
-},
+placeholder = { Text("Сообщение...") },
 shape = CircleShape,
 singleLine = true
 )
 Button(
 onClick = {
-if (inputText.isNotBlank()) {
-RedFoxTdEngine.sendTextMessage(chat.id, inputText)
+val textToSend = inputText.trim()
+if (textToSend.isNotEmpty()) {
+when {
+editingTarget != null -> {
+RedFoxTdEngine.editTextMessage(chat.id, editingTarget!!.id, textToSend)
+editingTarget = null
+}
+replyTarget != null -> {
+RedFoxTdEngine.sendReplyMessage(chat.id, replyTarget!!.id, textToSend)
+replyTarget = null
+}
+else -> {
+RedFoxTdEngine.sendTextMessage(chat.id, textToSend)
+}
+}
 inputText = ""
 }
 },
 shape = CircleShape,
 modifier = Modifier.height(50.dp)
 ) {
-Text("->", fontWeight = FontWeight.Bold)
+Text(if (editingTarget != null) "✓" else "->", fontWeight = FontWeight.Bold)
+}
 }
 }
 }
@@ -189,6 +358,10 @@ val isSpam = remember(msg.id) {
 listOf("казино", "крипто", "заработок", "ставка").any { msg.text.contains(it, ignoreCase = true) }
 }
 var revealSpam by remember { mutableStateOf(false) }
+AnimatedVisibility(
+visible = !vanishingIds.contains(msg.id),
+exit = fadeOut(tween(340)) + scaleOut(tween(340), targetScale = 0.65f)
+) {
 Row(
 modifier = Modifier.fillMaxWidth(),
 horizontalArrangement = if (msg.isOutgoing) Arrangement.End else Arrangement.Start
@@ -209,7 +382,7 @@ modifier = Modifier
 .widthIn(max = 310.dp)
 .clickable {
 if (isSpam && !revealSpam) revealSpam = true
-else inspectedMessage = msg
+else selectedMessage = msg
 }
 ) {
 Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -221,6 +394,20 @@ fontWeight = FontWeight.Bold,
 color = MaterialTheme.colorScheme.error
 )
 Spacer(Modifier.height(4.dp))
+}
+// Отображение реальной фотографии из Telegram с подсветкой Ambient Mode
+if (msg.mediaLocalPath.isNotBlank()) {
+RedFoxLocalImage(
+filePath = msg.mediaLocalPath,
+contentDescription = "Фото",
+modifier = Modifier
+.fillMaxWidth()
+.heightIn(min = 140.dp, max = 240.dp)
+.padding(bottom = 6.dp)
+.shadow(10.dp, RoundedCornerShape(16.dp))
+.clip(RoundedCornerShape(16.dp))
+.clickable { fullscreenPhotoPath = msg.mediaLocalPath }
+)
 }
 if (isSpam && !revealSpam) {
 Text(
@@ -239,6 +426,18 @@ MaterialTheme.colorScheme.onSurface
 }
 )
 }
+Row(
+modifier = Modifier.align(Alignment.End).padding(top = 2.dp),
+verticalAlignment = Alignment.CenterVertically,
+horizontalArrangement = Arrangement.spacedBy(4.dp)
+) {
+if (msg.isEdited) {
+Text(
+text = "изм.",
+style = MaterialTheme.typography.labelSmall,
+color = MaterialTheme.colorScheme.onSurfaceVariant
+)
+}
 if (msg.isOutgoing) {
 val isRead = msg.isSentToServer && msg.id <= lastReadOutboxId
 val checkSymbol = when {
@@ -246,16 +445,13 @@ val checkSymbol = when {
 isRead -> "✓✓"
 else -> "✓"
 }
-Row(
-modifier = Modifier.align(Alignment.End).padding(top = 2.dp),
-verticalAlignment = Alignment.CenterVertically
-) {
 Text(
 text = checkSymbol,
 style = MaterialTheme.typography.labelSmall,
 fontWeight = FontWeight.Bold,
 color = if (isRead) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
 )
+}
 }
 }
 }
