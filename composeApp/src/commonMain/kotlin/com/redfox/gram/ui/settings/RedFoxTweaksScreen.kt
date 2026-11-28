@@ -62,6 +62,10 @@ fun RedFoxTweaksScreen(
         RedFoxTdEngine.syncCloudThemesAndBackground()
     }
 
+    if (subScreen == "THEMES") {
+        RedFoxAppearanceScreen(onBack = { subScreen = "ROOT" })
+        return
+    }
     if (subScreen != "ROOT") {
         Scaffold(
             topBar = {

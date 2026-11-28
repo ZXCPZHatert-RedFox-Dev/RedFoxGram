@@ -440,8 +440,8 @@ bottomEnd = if (msg.isOutgoing) 6.dp else 22.dp
 ),
 color = when {
 msg.isDeletedSaved && settings.antiDeleteMessages -> MaterialTheme.colorScheme.errorContainer
-msg.isOutgoing -> MaterialTheme.colorScheme.primaryContainer
-else -> MaterialTheme.colorScheme.surfaceContainerHigh
+msg.isOutgoing -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (settings.glassMessages) 0.86f else 1f)
+else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (settings.glassMessages) 0.82f else 1f)
 },
 modifier = Modifier
 .widthIn(max = 310.dp)

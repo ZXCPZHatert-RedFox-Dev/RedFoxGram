@@ -23,7 +23,16 @@ data class RedFoxSettingsState(
     val syncedTelegramAccentHex: Long = 0L,
     val syncedThemeName: String = "",
     val antiScreenshotEnabled: Boolean = false,
-    val ambientPhotoGlow: Boolean = true
+    val ambientPhotoGlow: Boolean = true,
+    val expressiveSliders: Boolean = true,
+    val sliderTrackHeightDp: Float = 20f,
+    val sliderThumbHeightDp: Float = 44f,
+    val barrelScrollEffect: Boolean = true,
+    val messageTails: Boolean = true,
+    val glassMessages: Boolean = true,
+    val headerBlurStyle: Boolean = true,
+    val fontStyleName: String = "Системный",
+    val avatarShapeOrdinal: Int = 0
 )
 
 object RedFoxConfig {
