@@ -119,7 +119,7 @@ fun RedFoxMediaAndOtherScreen(
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("Показывать текст песни в мини-плеере", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                            Switch(checked = settings.liveLrcLyricsBar, onCheckedChange = { v -> RedFoxConfig.update { it.copy(liveLrcLyricsBar = v) } })
+                            com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.liveLrcLyricsBar, onCheckedChange = { v -> RedFoxConfig.update { it.copy(liveLrcLyricsBar = v) } })
                         }
                     }
                 }
@@ -151,7 +151,7 @@ fun RedFoxMediaAndOtherScreen(
                                 Text("Волнистое кольцо загрузки M3E", style = MaterialTheme.typography.titleMedium)
                                 Text("Фигура, затем кольцо прогресса при скачивании файлов", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Switch(checked = settings.wavyDownloadRing, onCheckedChange = { v -> RedFoxConfig.update { it.copy(wavyDownloadRing = v) } })
+                            com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.wavyDownloadRing, onCheckedChange = { v -> RedFoxConfig.update { it.copy(wavyDownloadRing = v) } })
                         }
                     }
                 }
@@ -197,7 +197,7 @@ Column(Modifier.weight(1f)) {
 Text("Использовать заднюю камеру", style = MaterialTheme.typography.titleMedium)
 Text("Для видеосообщений вместо фронтальной", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
-Switch(checked = settings.useBackCameraDefault, onCheckedChange = { v -> RedFoxConfig.update { it.copy(useBackCameraDefault = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.useBackCameraDefault, onCheckedChange = { v -> RedFoxConfig.update { it.copy(useBackCameraDefault = v) } })
 }
 }
 }
@@ -213,7 +213,7 @@ RedFoxConfig.update { it.copy(autoCheckUpdates = !it.autoCheckUpdates) }
 ) {
 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 Text("Проверять обновления RedFoxGram", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-Switch(checked = settings.autoCheckUpdates, onCheckedChange = { v -> RedFoxConfig.update { it.copy(autoCheckUpdates = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.autoCheckUpdates, onCheckedChange = { v -> RedFoxConfig.update { it.copy(autoCheckUpdates = v) } })
 }
 }
 }

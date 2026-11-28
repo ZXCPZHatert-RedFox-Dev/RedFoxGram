@@ -697,7 +697,7 @@ color = MaterialTheme.colorScheme.onSurfaceVariant
 }
 }
 Spacer(Modifier.width(12.dp))
-Switch(checked = checked, onCheckedChange = onCheckedChange)
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = checked, onCheckedChange = onCheckedChange)
 }
 }
 }

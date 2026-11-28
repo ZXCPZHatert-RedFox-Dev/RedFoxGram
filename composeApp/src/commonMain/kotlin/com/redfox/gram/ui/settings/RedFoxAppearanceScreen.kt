@@ -355,7 +355,7 @@ Text("NEW", modifier = Modifier.padding(horizontal = 4.dp), color = MaterialThem
 }
 Text("Сообщения и чаты плавно уходят за край", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
-Switch(checked = settings.barrelScrollEffect, onCheckedChange = { v -> RedFoxConfig.update { it.copy(barrelScrollEffect = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.barrelScrollEffect, onCheckedChange = { v -> RedFoxConfig.update { it.copy(barrelScrollEffect = v) } })
 }
 }
 }
@@ -409,7 +409,7 @@ modifier = Modifier.fillMaxWidth().clickable { RedFoxConfig.update { it.copy(mes
 ) {
 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 Text("Хвосты у сообщений", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-Switch(checked = settings.messageTails, onCheckedChange = { v -> RedFoxConfig.update { it.copy(messageTails = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.messageTails, onCheckedChange = { v -> RedFoxConfig.update { it.copy(messageTails = v) } })
 }
 }
 }
@@ -424,7 +424,7 @@ Column(Modifier.weight(1f)) {
 Text("Стеклянные сообщения", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 Text("Полупрозрачные пузыри M3E в переписках", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
-Switch(checked = settings.glassMessages, onCheckedChange = { v -> RedFoxConfig.update { it.copy(glassMessages = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.glassMessages, onCheckedChange = { v -> RedFoxConfig.update { it.copy(glassMessages = v) } })
 }
 }
 }

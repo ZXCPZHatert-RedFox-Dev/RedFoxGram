@@ -147,7 +147,7 @@ fun RedFoxScreensDesigner(
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("Вкладка «Профиль» в панели", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                            Switch(checked = settings.navShowProfileTab, onCheckedChange = { v -> RedFoxConfig.update { it.copy(navShowProfileTab = v) } })
+                            com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.navShowProfileTab, onCheckedChange = { v -> RedFoxConfig.update { it.copy(navShowProfileTab = v) } })
                         }
                     }
                 }
@@ -161,7 +161,7 @@ fun RedFoxScreensDesigner(
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("Кнопка действия (+) в одном ряду", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                            Switch(checked = settings.navActionInRow, onCheckedChange = { v -> RedFoxConfig.update { it.copy(navActionInRow = v) } })
+                            com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.navActionInRow, onCheckedChange = { v -> RedFoxConfig.update { it.copy(navActionInRow = v) } })
                         }
                     }
                 }
@@ -222,7 +222,7 @@ RedFoxConfig.update { it.copy(centerHeaderTitle = !it.centerHeaderTitle) }
 ) {
 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 Text("Заголовок по центру", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-Switch(checked = settings.centerHeaderTitle, onCheckedChange = { v -> RedFoxConfig.update { it.copy(centerHeaderTitle = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.centerHeaderTitle, onCheckedChange = { v -> RedFoxConfig.update { it.copy(centerHeaderTitle = v) } })
 }
 }
 }
@@ -239,7 +239,7 @@ RedFoxConfig.update { it.copy(holidaySnowEnabled = !it.holidaySnowEnabled) }
 ) {
 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 Text("Снег в шапке", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-Switch(checked = settings.holidaySnowEnabled, onCheckedChange = { v -> RedFoxConfig.update { it.copy(holidaySnowEnabled = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.holidaySnowEnabled, onCheckedChange = { v -> RedFoxConfig.update { it.copy(holidaySnowEnabled = v) } })
 }
 }
 }
@@ -253,7 +253,7 @@ RedFoxConfig.update { it.copy(holidaySantaHatEnabled = !it.holidaySantaHatEnable
 ) {
 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 Text("Новогодний колпак", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-Switch(checked = settings.holidaySantaHatEnabled, onCheckedChange = { v -> RedFoxConfig.update { it.copy(holidaySantaHatEnabled = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.holidaySantaHatEnabled, onCheckedChange = { v -> RedFoxConfig.update { it.copy(holidaySantaHatEnabled = v) } })
 }
 }
 }
@@ -267,7 +267,7 @@ RedFoxConfig.update { it.copy(showSearchInHeader = !it.showSearchInHeader) }
 ) {
 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 Text("Поиск в шапке", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-Switch(checked = settings.showSearchInHeader, onCheckedChange = { v -> RedFoxConfig.update { it.copy(showSearchInHeader = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.showSearchInHeader, onCheckedChange = { v -> RedFoxConfig.update { it.copy(showSearchInHeader = v) } })
 }
 }
 }

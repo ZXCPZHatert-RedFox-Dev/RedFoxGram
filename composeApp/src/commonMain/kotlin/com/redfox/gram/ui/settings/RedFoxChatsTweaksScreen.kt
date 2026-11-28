@@ -75,7 +75,7 @@ fun RedFoxChatsTweaksScreen(onBack: () -> Unit) {
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Скрыть папку «Все чаты»", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        Switch(checked = settings.hideAllChatsFolder, onCheckedChange = { v -> RedFoxConfig.update { it.copy(hideAllChatsFolder = v) } })
+                        com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.hideAllChatsFolder, onCheckedChange = { v -> RedFoxConfig.update { it.copy(hideAllChatsFolder = v) } })
                     }
                 }
             }
@@ -150,7 +150,7 @@ fun RedFoxChatsTweaksScreen(onBack: () -> Unit) {
                             }
                             Text("Буквы плавно проявляются, курсор плывёт", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Switch(checked = settings.animatedTypingCursor, onCheckedChange = { v -> RedFoxConfig.update { it.copy(animatedTypingCursor = v) } })
+                        com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.animatedTypingCursor, onCheckedChange = { v -> RedFoxConfig.update { it.copy(animatedTypingCursor = v) } })
                     }
                 }
             }
@@ -188,7 +188,7 @@ RedFoxConfig.update { it.copy(showSecondsInTime = !it.showSecondsInTime) }
 ) {
 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 Text("Секунды во времени", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-Switch(checked = settings.showSecondsInTime, onCheckedChange = { v -> RedFoxConfig.update { it.copy(showSecondsInTime = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.showSecondsInTime, onCheckedChange = { v -> RedFoxConfig.update { it.copy(showSecondsInTime = v) } })
 }
 }
 }
@@ -205,7 +205,7 @@ Column(Modifier.weight(1f)) {
 Text("Кнопка листания вверх", style = MaterialTheme.typography.titleMedium)
 Text("Быстрый переход к началу переписки", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
-Switch(checked = settings.showScrollToTopBtn, onCheckedChange = { v -> RedFoxConfig.update { it.copy(showScrollToTopBtn = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.showScrollToTopBtn, onCheckedChange = { v -> RedFoxConfig.update { it.copy(showScrollToTopBtn = v) } })
 }
 }
 }

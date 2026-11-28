@@ -127,7 +127,7 @@ fun RedFoxDevicesAndLabsScreen(
                                 Text("Отправка фото без сжатия", style = MaterialTheme.typography.titleMedium)
                                 Text("Передавать снимки в оригинальном разрешении", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Switch(checked = settings.sendPhotosUncompressed, onCheckedChange = { v -> RedFoxConfig.update { it.copy(sendPhotosUncompressed = v) } })
+                            com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.sendPhotosUncompressed, onCheckedChange = { v -> RedFoxConfig.update { it.copy(sendPhotosUncompressed = v) } })
                         }
                     }
                 }
@@ -154,7 +154,7 @@ fun RedFoxDevicesAndLabsScreen(
                                 Text("Подтверждать звонки и голосовые", style = MaterialTheme.typography.titleMedium)
                                 Text("Защита от случайного нажатия на микрофон или звонок", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Switch(checked = settings.confirmBeforeCallOrVoice, onCheckedChange = { v -> RedFoxConfig.update { it.copy(confirmBeforeCallOrVoice = v) } })
+                            com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.confirmBeforeCallOrVoice, onCheckedChange = { v -> RedFoxConfig.update { it.copy(confirmBeforeCallOrVoice = v) } })
                         }
                     }
                 }
@@ -171,7 +171,7 @@ fun RedFoxDevicesAndLabsScreen(
                                 Text("Автоперевод иностранных сообщений", style = MaterialTheme.typography.titleMedium)
                                 Text("Показывать кнопку мгновенного перевода в чатах", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Switch(checked = settings.autoTranslateForeign, onCheckedChange = { v -> RedFoxConfig.update { it.copy(autoTranslateForeign = v) } })
+                            com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.autoTranslateForeign, onCheckedChange = { v -> RedFoxConfig.update { it.copy(autoTranslateForeign = v) } })
                         }
                     }
                 }
@@ -189,7 +189,7 @@ Column(Modifier.weight(1f)) {
 Text("Энергосбережение", style = MaterialTheme.typography.titleMedium)
 Text("Уменьшить частоту фоновых анимаций для экономии заряда", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
-Switch(checked = settings.powerSavingMode, onCheckedChange = { v -> RedFoxConfig.update { it.copy(powerSavingMode = v) } })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = settings.powerSavingMode, onCheckedChange = { v -> RedFoxConfig.update { it.copy(powerSavingMode = v) } })
 }
 }
 }

@@ -147,7 +147,7 @@ fun RedFoxPeerProfileScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Switch(
+                        com.redfox.gram.ui.components.ExpressiveSwitch(
                             checked = isDuo,
                             onCheckedChange = { enable ->
                                 RedFoxConfig.update { cur ->
@@ -216,7 +216,7 @@ style = MaterialTheme.typography.bodySmall,
 color = MaterialTheme.colorScheme.onSurfaceVariant
 )
 }
-Switch(checked = !isMuted, onCheckedChange = { isMuted = !it })
+com.redfox.gram.ui.components.ExpressiveSwitch(checked = !isMuted, onCheckedChange = { isMuted = !it })
 }
 }
 }
@@ -248,7 +248,7 @@ style = MaterialTheme.typography.bodySmall,
 color = MaterialTheme.colorScheme.onSurfaceVariant
 )
 }
-Switch(
+com.redfox.gram.ui.components.ExpressiveSwitch(
 checked = isHidden,
 onCheckedChange = {
 RedFoxConfig.update { cur ->
