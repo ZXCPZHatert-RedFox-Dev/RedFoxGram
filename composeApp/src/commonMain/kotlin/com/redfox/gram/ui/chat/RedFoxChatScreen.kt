@@ -50,7 +50,7 @@ private val AccentPaperclipIcon: ImageVector by lazy {
         viewportHeight = 24f
     ).apply {
         path(
-            stroke = SolidColor(Color.Black),
+            stroke = SolidColor(Color.White),
             strokeLineWidth = 2.1f,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
