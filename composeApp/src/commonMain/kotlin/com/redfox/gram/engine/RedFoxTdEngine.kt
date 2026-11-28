@@ -18,6 +18,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 object RedFoxTdEngine {
+    data class ReactionBadge(
+        val emoji: String,
+        val count: Int,
+        val isChosen: Boolean
+    )
+
+    private val _pinnedMessageText = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val pinnedMessageText = _pinnedMessageText.asStateFlow()
+
     data class CurrentUserProfile(
         val id: Long = 0L,
         val fullName: String = "Пользователь RedFoxGram",
@@ -84,7 +93,8 @@ object RedFoxTdEngine {
         val replyToText: String = "",
         val docFileId: Int = 0,
         val docFileName: String = "",
-        val isAudio: Boolean = false
+        val isAudio: Boolean = false,
+        val reactions: List<ReactionBadge> = emptyList()
     )
 
     private val _activeChatMessages = MutableStateFlow<List<LiveMessageItem>>(emptyList())
@@ -202,6 +212,17 @@ object RedFoxTdEngine {
                         }
                         if (colors.isNotEmpty()) {
                             _syncedCloudAccents.value = colors
+                        }
+                    }
+                }
+
+                                launch {
+                    tdl.messageInteractionInfoUpdates.collect { upd ->
+                        if (upd.chatId == currentOpenedChatId) {
+                            val updatedReactions = extractReactions(upd.interactionInfo)
+                            _activeChatMessages.update { list ->
+                                list.map { if (it.id == upd.messageId) it.copy(reactions = updatedReactions) else it }
+                            }
                         }
                     }
                 }
@@ -394,6 +415,10 @@ val chatObj = (tdl.getChat(chatId = chatId) as? TdlResult.Success)?.result
             if (chatObj != null) {
                 _lastReadOutboxMap.update { it + (chatId to chatObj.lastReadOutboxMessageId) }
             }
+            val pinnedRes = (tdl.getChatPinnedMessage(chatId = chatId) as? TdlResult.Success)?.result
+            if (pinnedRes != null) {
+                _pinnedMessageText.update { it + (chatId to extractContentText(pinnedRes.content)) }
+            }
             val histRes = tdl.getChatHistory(
 chatId = chatId,
 fromMessageId = 0L,
@@ -562,6 +587,53 @@ forceRead = true
         }
     }
 
+    
+    private fun extractReactions(info: MessageInteractionInfo?): List<ReactionBadge> {
+        val list = info?.reactions?.reactions ?: return emptyList()
+        return list.mapNotNull { r ->
+            val emoji = (r.type as? ReactionTypeEmoji)?.emoji ?: return@mapNotNull null
+            ReactionBadge(
+                emoji = emoji,
+                count = r.totalCount,
+                isChosen = r.isChosen
+            )
+        }
+    }
+
+    fun toggleMessageReaction(chatId: Long, messageId: Long, emoji: String, currentlyChosen: Boolean) {
+        scope.launch {
+            val tdl = client ?: return@launch
+            val reactionType = ReactionTypeEmoji(emoji = emoji)
+            if (currentlyChosen) {
+                tdl.removeMessageReaction(chatId = chatId, messageId = messageId, reactionType = reactionType)
+            } else {
+                tdl.addMessageReaction(
+                    chatId = chatId,
+                    messageId = messageId,
+                    reactionType = reactionType,
+                    isBig = false,
+                    updateRecentReactions = true
+                )
+            }
+        }
+    }
+
+    fun pinMessageInChat(chatId: Long, messageId: Long) {
+        scope.launch {
+            val tdl = client ?: return@launch
+            tdl.pinChatMessage(
+                chatId = chatId,
+                messageId = messageId,
+                disableNotification = true,
+                onlyForSelf = false
+            )
+            val targetText = _activeChatMessages.value.firstOrNull { it.id == messageId }?.text
+            if (!targetText.isNullOrBlank()) {
+                _pinnedMessageText.update { it + (chatId to targetText) }
+            }
+        }
+    }
+
     fun sendTextMessage(chatId: Long, text: String) {
 if (text.isBlank()) return
 scope.launch {
@@ -650,7 +722,8 @@ private fun mapTdMessage(msg: Message): LiveMessageItem {
             mediaLocalPath = photoPath,
             docFileId = docId,
             docFileName = docName,
-            isAudio = isAudioFile
+            isAudio = isAudioFile,
+            reactions = extractReactions(msg.interactionInfo)
         )
     }
 

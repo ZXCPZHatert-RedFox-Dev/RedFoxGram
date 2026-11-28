@@ -77,6 +77,8 @@ fun RedFoxChatScreen(
     val cloudBgHex by RedFoxTdEngine.cloudChatBackgroundHex.collectAsState()
     val liveMessages by RedFoxTdEngine.activeChatMessages.collectAsState()
     val lastReadOutboxMap by RedFoxTdEngine.lastReadOutboxMap.collectAsState()
+    val pinnedMap by RedFoxTdEngine.pinnedMessageText.collectAsState()
+    val pinnedText = pinnedMap.get(chat.id)
     val lastReadOutboxId = lastReadOutboxMap.get(chat.id) ?: 0L
     val uiScope = rememberCoroutineScope()
 
@@ -147,6 +149,31 @@ fun RedFoxChatScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        HorizontalDivider()
+                                                // Быстрые реакции Telegram (синхронизируются с аккаунтом)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            listOf("❤️", "🔥", "👍", "😂", "😮", "😢").forEach { emoji ->
+                                val existing = msg.reactions.firstOrNull { it.emoji == emoji }
+                                val isChosen = existing?.isChosen == true
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (isChosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    modifier = Modifier.clickable {
+                                        RedFoxTdEngine.toggleMessageReaction(chat.id, msg.id, emoji, isChosen)
+                                        selectedMessage = null
+                                    }
+                                ) {
+                                    Text(
+                                        text = emoji,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                            }
+                        }
                         HorizontalDivider()
                         FilledTonalButton(
                             onClick = {
