@@ -49,7 +49,14 @@ data class RedFoxSettingsState(
     val doubleTapReaction: String = "❤️",
     val showSecondsInTime: Boolean = true,
     val showScrollToTopBtn: Boolean = true,
-    val animatedTypingCursor: Boolean = true
+    val animatedTypingCursor: Boolean = true,
+    val seekbarStyle: String = "FINE_WAVE",
+    val waveSpeedDpPerSec: Float = 20f,
+    val wavyDownloadRing: Boolean = true,
+    val cameraEngine: String = "CAMERA2",
+    val videoNoteFps: Int = 30,
+    val useBackCameraDefault: Boolean = false,
+    val autoCheckUpdates: Boolean = true
 )
 
 object RedFoxConfig {

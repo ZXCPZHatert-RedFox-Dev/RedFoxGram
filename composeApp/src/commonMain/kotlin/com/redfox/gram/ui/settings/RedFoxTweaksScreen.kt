@@ -62,6 +62,7 @@ fun RedFoxTweaksScreen(
         RedFoxTdEngine.syncCloudThemesAndBackground()
     }
 
+    if (subScreen in listOf("PLAYER", "DOWNLOAD", "CAMERA", "OTHER")) { RedFoxMediaAndOtherScreen(section = subScreen, onBack = { subScreen = "ROOT" }); return }
     if (subScreen == "CHATS_TWEAKS") { RedFoxChatsTweaksScreen(onBack = { subScreen = "ROOT" }); return }
     if (subScreen == "THEMES") {
         RedFoxAppearanceScreen(onBack = { subScreen = "ROOT" })
