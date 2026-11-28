@@ -38,6 +38,7 @@ data class ProxyNode(
 data class ProxyHubState(
     val enabled: Boolean = false,
     val autoSmartRotation: Boolean = true,
+    val useTgWsProxy: Boolean = true,
     val activeNodeId: String = "",
     val isCheckingPing: Boolean = false,
     val statusNote: String = "Авто-обход Xray / MTProto (127.0.0.1:10808)",
@@ -45,6 +46,32 @@ data class ProxyHubState(
 )
 
 object RedFoxProxyManager {
+    fun toggleTgWsProxy(enabled: Boolean) {
+        _state.update { it.copy(useTgWsProxy = enabled, enabled = enabled || it.enabled) }
+        if (enabled) {
+            val ok = RedFoxTgWsProxy.start()
+            val wsNode = ProxyNode(
+                id = "tg-ws-local",
+                name = "tg-ws-proxy (WebSocket WSS)",
+                host = "127.0.0.1",
+                port = RedFoxTgWsProxy.LOCAL_PORT,
+                protocol = ProxyProtocol.SOCKS5,
+                pingMs = if (ok) 14 else -1
+            )
+            _state.update {
+                it.copy(
+                    activeNodeId = wsNode.id,
+                    statusNote = if (ok) "Активен tg-ws-proxy (127.0.0.1:${RedFoxTgWsProxy.LOCAL_PORT} -> WSS)" else "Ошибка запуска tg-ws-proxy"
+                )
+            }
+            if (ok) RedFoxTdEngine.syncProxyState(true, wsNode)
+        } else {
+            RedFoxTgWsProxy.stop()
+            _state.update { it.copy(statusNote = "tg-ws-proxy отключён") }
+            RedFoxTdEngine.syncProxyState(false, null)
+        }
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _state = MutableStateFlow(ProxyHubState())
     val state: StateFlow<ProxyHubState> = _state.asStateFlow()
@@ -87,7 +114,7 @@ object RedFoxProxyManager {
                 selectNode(best.id)
             } else {
                 // Авто-старт встроенного Xray-обхода при самом первом открытии приложения без настроек
-                addFromLink(DEFAULT_AUTO_SUB)
+                toggleTgWsProxy(true)
             }
         }
     }

@@ -18,6 +18,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 object RedFoxTdEngine {
+    private val _chatAvatars = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val chatAvatars = _chatAvatars.asStateFlow()
+
+    private val fileIdToChatId = mutableMapOf<Int, Long>()
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: TdlClient? = null
     private var started = false
@@ -542,6 +547,25 @@ RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message
                 )
             }
             _folderChats.value = list
+        }
+    }
+
+    
+    fun ensureChatAvatar(chatId: Long) {
+        if (_chatAvatars.value.containsKey(chatId)) return
+        scope.launch {
+            val tdl = client ?: return@launch
+            val chat = (tdl.getChat(chatId = chatId) as? TdlResult.Success)?.result ?: return@launch
+            val photoFile = chat.photo?.small ?: return@launch
+            if (photoFile.local.isDownloadingCompleted && photoFile.local.path.isNotBlank()) {
+                _chatAvatars.update { it + (chatId to photoFile.local.path) }
+            } else if (photoFile.id != 0) {
+                fileIdToChatId.put(photoFile.id, chatId)
+                val dl = (tdl.downloadFile(fileId = photoFile.id, priority = 12, offset = 0L, limit = 0L, synchronous = true) as? TdlResult.Success)?.result
+                if (dl != null && dl.local.path.isNotBlank()) {
+                    _chatAvatars.update { it + (chatId to dl.local.path) }
+                }
+            }
         }
     }
 

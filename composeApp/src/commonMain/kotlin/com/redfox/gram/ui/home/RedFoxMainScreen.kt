@@ -145,7 +145,7 @@ Text(
 text = "✓",
 style = MaterialTheme.typography.titleMedium,
 fontWeight = FontWeight.ExtraBold,
-color = Color(0xFF4CAF50)
+color = MaterialTheme.colorScheme.primary
 )
 Spacer(Modifier.width(6.dp))
 Surface(
@@ -338,6 +338,7 @@ antiDeleteEnabled: Boolean,
 onClick: () -> Unit
 ) {
 val avatarShape = remember(avatarStyle) { buildExpressiveAvatarShape(avatarStyle) }
+    LaunchedEffect(chat.id) { RedFoxTdEngine.ensureChatAvatar(chat.id) }
 Surface(
 shape = RoundedCornerShape(26.dp),
 color = MaterialTheme.colorScheme.surfaceContainerLow,

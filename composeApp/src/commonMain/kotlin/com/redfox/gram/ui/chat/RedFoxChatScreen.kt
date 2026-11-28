@@ -254,7 +254,7 @@ Text(
 text = checkSymbol,
 style = MaterialTheme.typography.labelSmall,
 fontWeight = FontWeight.Bold,
-color = if (isRead) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+color = if (isRead) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
 )
 }
 }
