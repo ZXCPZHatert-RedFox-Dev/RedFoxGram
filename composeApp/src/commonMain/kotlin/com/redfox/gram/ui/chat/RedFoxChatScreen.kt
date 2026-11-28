@@ -442,8 +442,8 @@ bottomEnd = if (msg.isOutgoing) 6.dp else 22.dp
 ),
 color = when {
 msg.isDeletedSaved && settings.antiDeleteMessages -> MaterialTheme.colorScheme.errorContainer
-msg.isOutgoing -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (settings.glassMessages) 0.86f else 1f)
-else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (settings.glassMessages) 0.82f else 1f)
+msg.isOutgoing -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (settings.glassMessages) (settings.glassOpacityPercent / 100f) else 1f)
+else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (settings.glassMessages) ((settings.glassOpacityPercent - 4f).coerceAtLeast(25f) / 100f) else 1f)
 },
 modifier = Modifier
 .widthIn(max = 310.dp)
@@ -527,7 +527,7 @@ if (msg.docFileName.isNotBlank() || msg.isAudio) {
                                         RedFoxLocalImage(
                                             filePath = msg.mediaLocalPath,
                                             contentDescription = "Стикер",
-                                            modifier = Modifier.size(156.dp).padding(bottom = 4.dp)
+                                            modifier = Modifier.size((110 + settings.stickerSizePercent * 1.1f).dp).padding(bottom = 4.dp)
                                         )
                                     }
 

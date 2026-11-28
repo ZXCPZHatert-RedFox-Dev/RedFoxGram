@@ -69,7 +69,14 @@ data class RedFoxSettingsState(
     val sliderGapDp: Float = 12f,
     val sliderEndDotDp: Float = 8f,
     val glassSpecularGlare: Boolean = true,
-    val hideStoriesFeed: Boolean = false
+    val hideStoriesFeed: Boolean = false,
+    val glassOpacityPercent: Float = 86f,
+    val glassLightBorder: Boolean = true,
+    val chatEdgeBlur: Boolean = true,
+    val stickerSizePercent: Float = 50f,
+    val gifSizePercent: Float = 50f,
+    val folderIconOnly: Boolean = false,
+    val cursorShapeStyle: String = "BLOCK"
 )
 
 object RedFoxConfig {
