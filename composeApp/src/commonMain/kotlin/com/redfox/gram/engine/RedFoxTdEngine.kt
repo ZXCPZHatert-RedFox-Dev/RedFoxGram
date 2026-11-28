@@ -94,6 +94,8 @@ object RedFoxTdEngine {
         val docFileId: Int = 0,
         val docFileName: String = "",
         val isAudio: Boolean = false,
+        val isSticker: Boolean = false,
+        val isVideoNote: Boolean = false,
         val reactions: List<ReactionBadge> = emptyList()
     )
 
@@ -690,10 +692,23 @@ is MessageCall -> "📞 Звонок (${c.duration}с)"
 is MessagePoll -> "📊 Опрос: ${c.poll.question.text}"
 else -> "✨ Медиа / Вложение"
 }
-private fun mapTdMessage(msg: Message): LiveMessageItem {
+private fun formatUnixTime(unixSec: Int): String {
+        if (unixSec <= 0) return "TG"
+        val totalSec = unixSec.toLong() + 3L * 3600L // MSK UTC+3
+        val daySec = ((totalSec % 86400L) + 86400L) % 86400L
+        val hh = (daySec / 3600L).toString().padStart(2, '0')
+        val mm = ((daySec % 3600L) / 60L).toString().padStart(2, '0')
+        val ss = (daySec % 60L).toString().padStart(2, '0')
+        val showSec = com.redfox.gram.config.RedFoxConfig.state.value.showSecondsInTime
+        return if (showSec) "$hh:$mm:$ss" else "$hh:$mm"
+    }
+
+    private fun mapTdMessage(msg: Message): LiveMessageItem {
         var docId = 0
         var docName = ""
         var isAudioFile = false
+        var isStickerMsg = false
+        var isVideoNoteMsg = false
         val photoPath = when (val c = msg.content) {
             is MessagePhoto -> {
                 val f = c.photo.sizes.lastOrNull()?.photo
@@ -705,6 +720,31 @@ private fun mapTdMessage(msg: Message): LiveMessageItem {
                         ""
                     } else ""
                 } else ""
+            }
+            is MessageSticker -> {
+                isStickerMsg = true
+                val f = c.sticker.thumbnail?.file ?: c.sticker.sticker
+                if (f.local.isDownloadingCompleted && f.local.path.isNotBlank()) f.local.path
+                else if (f.id != 0) {
+                    fileIdToMsgId.put(f.id, msg.id)
+                    scope.launch { client?.downloadFile(fileId = f.id, priority = 14, offset = 0L, limit = 0L, synchronous = false) }
+                    ""
+                } else ""
+            }
+            is MessageVideoNote -> {
+                isVideoNoteMsg = true
+                docId = c.videoNote.video.id
+                docName = "Видеосообщение (${c.videoNote.duration} с)"
+                val thumb = c.videoNote.thumbnail?.file
+                if (thumb != null && thumb.local.isDownloadingCompleted && thumb.local.path.isNotBlank()) thumb.local.path
+                else if (c.videoNote.video.local.isDownloadingCompleted && c.videoNote.video.local.path.isNotBlank()) c.videoNote.video.local.path
+                else {
+                    if (thumb != null && thumb.id != 0) {
+                        fileIdToMsgId.put(thumb.id, msg.id)
+                        scope.launch { client?.downloadFile(fileId = thumb.id, priority = 14, offset = 0L, limit = 0L, synchronous = false) }
+                    }
+                    ""
+                }
             }
             is MessageDocument -> {
                 docId = c.document.document.id
@@ -725,7 +765,7 @@ private fun mapTdMessage(msg: Message): LiveMessageItem {
             }
             is MessageVoiceNote -> {
                 docId = c.voiceNote.voice.id
-                docName = "Голосовое сообщение"
+                docName = "Голосовое сообщение (${c.voiceNote.duration} с)"
                 isAudioFile = true
                 if (c.voiceNote.voice.local.isDownloadingCompleted && c.voiceNote.voice.local.path.isNotBlank()) {
                     c.voiceNote.voice.local.path
@@ -739,13 +779,15 @@ private fun mapTdMessage(msg: Message): LiveMessageItem {
             senderName = if (msg.isOutgoing) "Вы" else "Собеседник",
             text = extractContentText(msg.content),
             isOutgoing = msg.isOutgoing,
-            timeText = "TG",
+            timeText = formatUnixTime(msg.date),
             isDeletedSaved = msg.id in deletedMessageIds,
             isSentToServer = msg.sendingState == null,
             mediaLocalPath = photoPath,
             docFileId = docId,
             docFileName = docName,
             isAudio = isAudioFile,
+            isSticker = isStickerMsg,
+            isVideoNote = isVideoNoteMsg,
             reactions = extractReactions(msg.interactionInfo)
         )
     }

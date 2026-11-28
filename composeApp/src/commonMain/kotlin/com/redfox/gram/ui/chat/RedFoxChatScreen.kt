@@ -521,6 +521,51 @@ if (msg.docFileName.isNotBlank() || msg.isAudio) {
                                         }
                                     }
 
+                                    if (msg.isSticker && msg.mediaLocalPath.isNotBlank()) {
+                                        RedFoxLocalImage(
+                                            filePath = msg.mediaLocalPath,
+                                            contentDescription = "Стикер",
+                                            modifier = Modifier.size(156.dp).padding(bottom = 4.dp)
+                                        )
+                                    }
+
+                                    if (msg.isVideoNote) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(180.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                                .clickable {
+                                                    RedFoxTdEngine.downloadAndOpenMessageFile(
+                                                        messageId = msg.id,
+                                                        fileId = msg.docFileId,
+                                                        existingPath = msg.mediaLocalPath,
+                                                        isAudio = false,
+                                                        title = msg.docFileName
+                                                    )
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (msg.mediaLocalPath.isNotBlank()) {
+                                                RedFoxLocalImage(
+                                                    filePath = msg.mediaLocalPath,
+                                                    contentDescription = "Видеосообщение",
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            }
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = Color.Black.copy(alpha = 0.55f),
+                                                modifier = Modifier.size(44.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text("▶", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                                                }
+                                            }
+                                        }
+                                        Spacer(Modifier.height(6.dp))
+                                    }
+
                                     // Отображение реальной фотографии из Telegram с подсветкой Ambient Mode
 if (msg.mediaLocalPath.isNotBlank()) {
 RedFoxLocalImage(
