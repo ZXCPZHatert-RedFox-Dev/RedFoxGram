@@ -140,7 +140,8 @@ object RedFoxProxyManager {
             val target = list.find { it.id == _state.value.activeNodeId } ?: list.first()
             selectNode(target.id)
         } else {
-            refreshAllPings()
+            // Авто-загрузка встроенной бесплатной подписки для работы «из коробки» без VPN
+            addFromLink("https://prosvet.top")
         }
     }
 
