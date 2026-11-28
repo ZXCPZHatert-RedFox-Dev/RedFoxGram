@@ -83,14 +83,10 @@ object RedFoxProxyManager {
             loadSavedNodes()
             val best = _state.value.nodes.firstOrNull()
             if (best != null) {
-                _state.update {
-                    it.copy(
-                        enabled = true,
-                        activeNodeId = best.id,
-                        statusNote = "Авто-старт из кэша: ${best.host}:${best.port}"
-                    )
-                }
-                RedFoxTdEngine.syncProxyState(true, best)
+                selectNode(best.id)
+            } else {
+                // Авто-старт встроенного обхода при самом первом открытии приложения
+                addFromLink("https://prosvet.top")
             }
         }
     }
