@@ -222,7 +222,7 @@ color = MaterialTheme.colorScheme.primary
 )
 } else {
 Text(
-text = if (showHiddenVault) "Скрытые чаты" else (if (settings.holidaySantaHatEnabled) "🎅 " else "") + settings.customHeaderTitle.ifBlank { "RedFoxGram" } + (if (settings.holidaySnowEnabled) " ❄" else ""),
+text = if (showHiddenVault) "Скрытые чаты" else settings.customHeaderTitle.ifBlank { "RedFoxGram" },
 style = MaterialTheme.typography.titleLarge,
 fontWeight = FontWeight.ExtraBold
 )
