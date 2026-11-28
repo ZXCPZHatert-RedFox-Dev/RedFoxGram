@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 object RedFoxTdEngine {
+    private val _searchResults = MutableStateFlow<List<ChatPreview>>(emptyList())
+    val searchResults = _searchResults.asStateFlow()
+
     private val _chatAvatars = MutableStateFlow<Map<Long, String>>(emptyMap())
     val chatAvatars = _chatAvatars.asStateFlow()
 
@@ -423,6 +426,41 @@ forceRead = true
         scope.launch {
             client?.deleteMessages(chatId = chatId, messageIds = longArrayOf(messageId), revoke = revoke)
             _activeChatMessages.update { list -> list.filterNot { it.id == messageId } }
+        }
+    }
+
+    
+    fun searchTelegramChats(query: String) {
+        val clean = query.trim()
+        if (clean.isEmpty()) {
+            _searchResults.value = emptyList()
+            return
+        }
+        scope.launch {
+            val tdl = client ?: return@launch
+            val foundIds = linkedSetOf<Long>()
+            val localRes = tdl.searchChats(query = clean, limit = 25) as? TdlResult.Success
+            localRes?.result?.chatIds?.forEach { foundIds.add(it) }
+            val globalRes = tdl.searchPublicChats(query = clean) as? TdlResult.Success
+            globalRes?.result?.chatIds?.forEach { foundIds.add(it) }
+
+            val list = mutableListOf<ChatPreview>()
+            for (cid in foundIds) {
+                val chat = (tdl.getChat(chatId = cid) as? TdlResult.Success)?.result ?: continue
+                val lastMsg = chat.lastMessage
+                val lastText = if (lastMsg != null) extractContentText(lastMsg.content) else "Публичный чат / канал"
+                val isChannel = (chat.type as? ChatTypeSupergroup)?.isChannel == true
+                list.add(
+                    ChatPreview(
+                        id = chat.id,
+                        title = chat.title,
+                        lastMessage = lastText,
+                        time = if (isChannel) "Канал" else "Поиск",
+                        unreadCount = chat.unreadCount
+                    )
+                )
+            }
+            _searchResults.value = list
         }
     }
 

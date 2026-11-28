@@ -48,6 +48,9 @@ data class RedFoxSettingsState(
     val showUserIdsAndDc: Boolean = true,
     val smartProxyRotation: Boolean = true,
     val liveLrcLyricsBar: Boolean = true,
+    val pinLockEnabled: Boolean = false,
+    val pinCode: String = "0000",
+    val hiddenChatIds: Set<Long> = emptySet(),
     val wavySeekbar: Boolean = true
 )
 
