@@ -14,6 +14,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.URL
+import java.util.Base64
 import kotlin.random.Random
 
 enum class ProxyProtocol(val label: String) {
