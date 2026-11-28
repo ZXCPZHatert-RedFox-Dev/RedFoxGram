@@ -634,6 +634,29 @@ forceRead = true
         }
     }
 
+    
+    fun sendVoiceMessage(chatId: Long, filePath: String, durationSec: Int) {
+        if (filePath.isBlank()) return
+        scope.launch {
+            val tdl = client ?: return@launch
+            val content = InputMessageVoiceNote(
+                voiceNote = InputFileLocal(path = filePath),
+                duration = durationSec.coerceAtLeast(1),
+                waveform = byteArrayOf(),
+                caption = null,
+                selfDestructType = null
+            )
+            tdl.sendMessage(
+                chatId = chatId,
+                messageThreadId = 0L,
+                replyTo = null,
+                options = null,
+                replyMarkup = null,
+                inputMessageContent = content
+            )
+        }
+    }
+
     fun sendTextMessage(chatId: Long, text: String) {
 if (text.isBlank()) return
 scope.launch {
