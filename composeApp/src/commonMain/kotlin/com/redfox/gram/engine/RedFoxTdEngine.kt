@@ -64,7 +64,7 @@ object RedFoxTdEngine {
     private val fileIdToChatId = mutableMapOf<Int, Long>()
     private val fileIdToMsgId = mutableMapOf<Int, Long>()
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var client: TdlClient? = null
     private var started = false
 

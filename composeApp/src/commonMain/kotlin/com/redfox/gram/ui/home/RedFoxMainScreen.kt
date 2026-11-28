@@ -331,11 +331,11 @@ fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
 }
 }
             val activeTrack by com.redfox.gram.media.RedFoxAudioController.track.collectAsState()
-if (settings.liveLrcLyricsBar) {
+if (settings.liveLrcLyricsBar && activeTrack.isActive) {
 LiveLrcMiniBar(
 trackTitle = activeTrack.title,
 artist = activeTrack.artist,
-currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
+currentLine = activeTrack.currentLyricLine,
 isPlaying = isPlaying,
 onTogglePlay = { isPlaying = !isPlaying },
 onOpenFullPlayer = { showFullPlayer = true }
