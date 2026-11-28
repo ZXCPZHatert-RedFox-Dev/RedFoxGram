@@ -32,7 +32,17 @@ data class RedFoxSettingsState(
     val glassMessages: Boolean = true,
     val headerBlurStyle: Boolean = true,
     val fontStyleName: String = "Системный",
-    val avatarShapeOrdinal: Int = 0
+    val avatarShapeOrdinal: Int = 0,
+    val customHeaderTitle: String = "",
+    val centerHeaderTitle: Boolean = true,
+    val showSearchInHeader: Boolean = true,
+    val holidaySnowEnabled: Boolean = false,
+    val holidaySantaHatEnabled: Boolean = false,
+    val navBarStyle: String = "FLOATING",
+    val navShowProfileTab: Boolean = true,
+    val navActionInRow: Boolean = true,
+    val iconColorMode: String = "HARMONIZED",
+    val folderTabStyle: String = "BUTTONS"
 )
 
 object RedFoxConfig {

@@ -443,6 +443,12 @@ return
 }
 // Главный экран Настроек 1 в 1 как на твоих скриншотах из Opexgram
 val flowerShape = remember { buildExpressiveAvatarShape(ExpressiveAvatarStyle.FLOWER_12) }
+    val accentTint = MaterialTheme.colorScheme.primary
+    fun resolveIconColor(base: Color): Color = when (settings.iconColorMode) {
+        "ACCENT" -> accentTint
+        "HARMONIZED" -> accentTint.copy(alpha = 0.85f)
+        else -> base
+    }
 Scaffold(
 topBar = {
 TopAppBar(
@@ -527,7 +533,7 @@ textAlign = TextAlign.Center
 item {
 OpexCategoryCard(
 icon = Icons.Rounded.Star,
-iconBg = Color(0xFFE91E63),
+iconBg = resolveIconColor(Color(0xFFE91E63)),
 title = "Настройки RedFox / Opex",
 subtitle = "Функции и внешний вид клиента",
 onClick = { subScreen = "OPEX" }
@@ -536,7 +542,7 @@ onClick = { subScreen = "OPEX" }
 item {
 OpexCategoryCard(
 icon = Icons.Rounded.Person,
-iconBg = Color(0xFF9C27B0),
+iconBg = resolveIconColor(Color(0xFF9C27B0)),
 title = "Аккаунт",
 subtitle = "Номер, имя пользователя, ID профиля",
 onClick = {
@@ -550,7 +556,7 @@ backupNote = "ID ${currentUser.id} скопирован в буфер"
 item {
 OpexCategoryCard(
 icon = Icons.Rounded.Edit,
-iconBg = Color(0xFFFF7043),
+iconBg = resolveIconColor(Color(0xFFFF7043)),
 title = "Настройки чатов",
 subtitle = "Обои, облачные темы Telegram, углы пузырей",
 onClick = { subScreen = "THEMES" }
@@ -559,7 +565,7 @@ onClick = { subScreen = "THEMES" }
 item {
 OpexCategoryCard(
 icon = Icons.Rounded.Lock,
-iconBg = Color(0xFFFFB300),
+iconBg = resolveIconColor(Color(0xFFFFB300)),
 title = "Конфиденциальность",
 subtitle = "Замок Fortress, скрытые чаты, анти-скриншот",
 onClick = { subScreen = "PRIVACY" }
@@ -568,7 +574,7 @@ onClick = { subScreen = "PRIVACY" }
 item {
 OpexCategoryCard(
 icon = Icons.Rounded.Refresh,
-iconBg = Color(0xFFAB47BC),
+iconBg = resolveIconColor(Color(0xFFAB47BC)),
 title = "Данные и память",
 subtitle = "Очистка внутреннего кэша, экспорт .opex",
 onClick = { subScreen = "DATA" }
@@ -577,7 +583,7 @@ onClick = { subScreen = "DATA" }
 item {
 OpexCategoryCard(
 icon = Icons.Rounded.CheckCircle,
-iconBg = Color(0xFF26A69A),
+iconBg = resolveIconColor(Color(0xFF26A69A)),
 title = "RedFox Shield (Обход без VPN)",
 subtitle = if (proxyState.enabled) "Активен • ${proxyState.statusNote}" else "Серверы Xray и tg-ws-proxy",
 onClick = onOpenProxy

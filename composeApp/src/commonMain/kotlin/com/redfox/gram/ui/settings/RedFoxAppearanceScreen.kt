@@ -30,7 +30,11 @@ fun RedFoxAppearanceScreen(onBack: () -> Unit) {
     val tgThemes by RedFoxTdEngine.syncedTelegramThemes.collectAsState()
     val tgAccents by RedFoxTdEngine.syncedCloudAccents.collectAsState()
 
-    var subPage by remember { mutableStateOf("MAIN") } // MAIN, SLIDERS, FONTS
+    var subPage by remember { mutableStateOf("MAIN") }
+    if (subPage in listOf("NAV_BAR", "HEADER", "SETTINGS_SCREEN")) {
+        RedFoxScreensDesigner(initialSection = subPage, onBack = { subPage = "MAIN" })
+        return
+    } // MAIN, SLIDERS, FONTS
 
     if (subPage == "SLIDERS") {
         Scaffold(
