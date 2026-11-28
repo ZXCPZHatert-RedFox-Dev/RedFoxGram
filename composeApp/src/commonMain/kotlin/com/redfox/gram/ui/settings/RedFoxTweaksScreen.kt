@@ -62,6 +62,7 @@ fun RedFoxTweaksScreen(
         RedFoxTdEngine.syncCloudThemesAndBackground()
     }
 
+    if (subScreen == "CHATS_TWEAKS") { RedFoxChatsTweaksScreen(onBack = { subScreen = "ROOT" }); return }
     if (subScreen == "THEMES") {
         RedFoxAppearanceScreen(onBack = { subScreen = "ROOT" })
         return

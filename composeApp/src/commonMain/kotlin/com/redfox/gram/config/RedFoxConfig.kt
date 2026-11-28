@@ -42,7 +42,14 @@ data class RedFoxSettingsState(
     val navShowProfileTab: Boolean = true,
     val navActionInRow: Boolean = true,
     val iconColorMode: String = "HARMONIZED",
-    val folderTabStyle: String = "BUTTONS"
+    val folderTabStyle: String = "BUTTONS",
+    val hideAllChatsFolder: Boolean = false,
+    val deleteEffectStyle: String = "PORTAL",
+    val inputFieldStyle: String = "EXPRESSIVE",
+    val doubleTapReaction: String = "❤️",
+    val showSecondsInTime: Boolean = true,
+    val showScrollToTopBtn: Boolean = true,
+    val animatedTypingCursor: Boolean = true
 )
 
 object RedFoxConfig {
