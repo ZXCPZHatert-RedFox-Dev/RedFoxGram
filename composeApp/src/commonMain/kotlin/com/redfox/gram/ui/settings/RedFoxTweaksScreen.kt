@@ -34,6 +34,7 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
     val settings: RedFoxSettingsState by RedFoxConfig.state.collectAsState()
     val currentUser by RedFoxTdEngine.currentUser.collectAsState()
     val tgThemes by RedFoxTdEngine.syncedTelegramThemes.collectAsState()
+    val tgAccents by RedFoxTdEngine.syncedCloudAccents.collectAsState()
     val proxyState by RedFoxProxyManager.state.collectAsState()
     val clipboard = LocalClipboardManager.current
 
@@ -42,6 +43,7 @@ fun RedFoxTweaksScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) {
         RedFoxTdEngine.loadCurrentUserProfile()
+        RedFoxTdEngine.syncCloudThemesAndBackground()
     }
 
     Scaffold(
@@ -245,7 +247,36 @@ modifier = Modifier.weight(1f)
 }
 }
 HorizontalDivider()
-Text("Углы пузырей сообщений (${settings.bubbleCornerDp} dp)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+if (tgAccents.isNotEmpty()) {
+                            HorizontalDivider()
+                            Text("Облачные акцентные цвета вашего Telegram", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                tgAccents.take(8).chunked(2).forEach { rowAccents ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                        rowAccents.forEach { (accName, accHex) ->
+                                            val isPicked = settings.themePreset == "TG_SYNC" && settings.syncedThemeName == accName
+                                            FilterChip(
+                                                selected = isPicked,
+                                                onClick = {
+                                                    RedFoxConfig.update {
+                                                        it.copy(
+                                                            themePreset = "TG_SYNC",
+                                                            syncedTelegramAccentHex = accHex,
+                                                            syncedThemeName = accName
+                                                        )
+                                                    }
+                                                },
+                                                shape = CircleShape,
+                                                label = { Text(accName, maxLines = 1) },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text("Углы пузырей сообщений (${settings.bubbleCornerDp} dp)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
 listOf(12 to "Классика", 22 to "M3E", 28 to "Капсулы").forEach { (dpVal, title) ->
 val selected = settings.bubbleCornerDp == dpVal

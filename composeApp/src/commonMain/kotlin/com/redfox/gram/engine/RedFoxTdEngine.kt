@@ -38,6 +38,12 @@ object RedFoxTdEngine {
 
     private val _syncedTelegramThemes = MutableStateFlow<List<SyncedTelegramTheme>>(emptyList())
     val syncedTelegramThemes = _syncedTelegramThemes.asStateFlow()
+    private val _syncedCloudAccents = MutableStateFlow<List<Pair<String, Long>>>(emptyList())
+    val syncedCloudAccents = _syncedCloudAccents.asStateFlow()
+
+    private val _cloudChatBackgroundHex = MutableStateFlow(0L)
+    val cloudChatBackgroundHex = _cloudChatBackgroundHex.asStateFlow()
+
 
 
     private val _searchResults = MutableStateFlow<List<ChatPreview>>(emptyList())
@@ -187,6 +193,19 @@ object RedFoxTdEngine {
                     }
                 }
 
+                                launch {
+                    tdl.accentColorsUpdates.collect { upd ->
+                        val colors = upd.colors.mapIndexedNotNull { index, ac ->
+                            val rawColor = ac.darkThemeColors.firstOrNull() ?: ac.lightThemeColors.firstOrNull() ?: return@mapIndexedNotNull null
+                            val argb = 0xFF000000L or (rawColor.toLong() and 0x00FFFFFFL)
+                            "Акцент TG #${index + 1}" to argb
+                        }
+                        if (colors.isNotEmpty()) {
+                            _syncedCloudAccents.value = colors
+                        }
+                    }
+                }
+
                 // 1. Слушатель авторизации
                 launch {
                     tdl.authorizationStateUpdates.collect { update ->
@@ -318,6 +337,7 @@ RedFoxAuthManager.moveToStep(AuthStep.PASSWORD_2FA)
 }
 is AuthorizationStateReady -> {
                                 loadCurrentUserProfile()
+                                syncCloudThemesAndBackground()
 _connectionStatus.value = "В сети (Telegram MTProto)"
 RedFoxAuthManager.completeLogin(skip2FA = true)
 loadRealChats(tdl)
@@ -806,6 +826,25 @@ RedFoxAuthManager.setAuthError("Неверный пароль 2FA: ${res.message
                 phone = phoneStr,
                 avatarPath = avPath
             )
+        }
+    }
+
+    
+    fun syncCloudThemesAndBackground() {
+        scope.launch {
+            val tdl = client ?: return@launch
+            tdl.defaultBackgroundUpdates.collect { upd ->
+                val bgDark = upd.background
+                val fillColor = when (val f = (bgDark?.type as? BackgroundTypeFill)?.fill) {
+                    is BackgroundFillSolid -> f.color.toLong()
+                    is BackgroundFillGradient -> f.topColor.toLong()
+                    is BackgroundFillFreeformGradient -> f.colors.firstOrNull()?.toLong() ?: 0L
+                    else -> 0L
+                }
+                if (fillColor != 0L) {
+                    _cloudChatBackgroundHex.value = 0xFF000000L or (fillColor and 0x00FFFFFFL)
+                }
+            }
         }
     }
 

@@ -74,6 +74,7 @@ fun RedFoxChatScreen(
     onBack: () -> Unit
 ) {
     val settings by RedFoxConfig.state.collectAsState()
+    val cloudBgHex by RedFoxTdEngine.cloudChatBackgroundHex.collectAsState()
     val liveMessages by RedFoxTdEngine.activeChatMessages.collectAsState()
     val lastReadOutboxMap by RedFoxTdEngine.lastReadOutboxMap.collectAsState()
     val lastReadOutboxId = lastReadOutboxMap.get(chat.id) ?: 0L
