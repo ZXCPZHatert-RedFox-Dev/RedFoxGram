@@ -14,7 +14,6 @@ actual fun openLocalFileWithSystem(filePath: String) {
         val activityThread = Class.forName("android.app.ActivityThread")
         val app = activityThread.getMethod("currentApplication").invoke(null) as? Application ?: return
 
-        // Разрешаем передачу локального файла в системный установщик/просмотрщик
         StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
 
         val ext = file.extension.lowercase()
