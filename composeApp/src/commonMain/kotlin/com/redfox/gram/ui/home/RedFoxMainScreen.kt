@@ -16,6 +16,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -236,7 +240,9 @@ avatarStyle = allStyles[(avatarStyle.ordinal + 1) % allStyles.size]
 }
 ) {
 Text(
-text = avatarStyle.label,
+text = avatarStyle.label.ifBlank { avatarStyle.name },
+                                        maxLines = 1,
+                                        softWrap = false,
 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
 style = MaterialTheme.typography.labelSmall,
 fontWeight = FontWeight.Bold,
@@ -254,10 +260,10 @@ searchQuery = ""
 RedFoxTdEngine.searchTelegramChats("")
 }
 }) {
-Text(if (isSearchMode) "✕" else "🔍", style = MaterialTheme.typography.titleMedium)
+Icon(imageVector = if (isSearchMode) Icons.Rounded.Close else Icons.Rounded.Search, contentDescription = "Поиск", tint = MaterialTheme.colorScheme.primary)
 }
 TextButton(onClick = { RedFoxTdEngine.refreshChatsNow() }) {
-Text("↻", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+Icon(imageVector = Icons.Rounded.Refresh, contentDescription = "Обновить", tint = MaterialTheme.colorScheme.primary)
 }
 }
 )
