@@ -127,12 +127,13 @@ object RedFoxAudioController {
         _track.value = ActiveTrackState(isActive = false)
     }
 
-    private fun queryUrl(urlStr: String): String {
+    private fun queryUrl(urlStr: String, extraHeaders: Map<String, String> = emptyMap()): String {
         val conn = URL(urlStr).openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
-        conn.setRequestProperty("User-Agent", "RedFoxGram/1.0 (https://github.com)")
-        conn.connectTimeout = 8000
-        conn.readTimeout = 8000
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 15; RedFoxGram) AppleWebKit/537.36 Chrome/131.0.0.0 Mobile Safari/537.36")
+        extraHeaders.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+        conn.connectTimeout = 7000
+        conn.readTimeout = 7000
         return conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
     }
 
@@ -215,6 +216,39 @@ object RedFoxAudioController {
             .trim()
     }
 
+    private fun fetchFromMusixmatch(title: String, artist: String): List<LrcTimedLine> {
+        val encTitle = URLEncoder.encode(title, "UTF-8")
+        val encArtist = URLEncoder.encode(artist, "UTF-8")
+        val headers = mapOf("Cookie" to "x-mxm-user-id=undefined; x-mxm-token-guid=cd25624c-2593-4210-811d-3c6678921234")
+        val urls = listOf(
+            "https://musixmatch.com",
+            "https://musixmatch.com"
+        )
+        for (u in urls) {
+            val json = runCatching { queryUrl(u, headers) }.getOrDefault("")
+            if (json.isBlank()) continue
+            val subBody = extractAllJsonStringFields(json, "subtitle_body").firstOrNull() ?: ""
+            val lyrBody = extractAllJsonStringFields(json, "lyrics_body").firstOrNull() ?: ""
+            val lines = parseLrcLines(subBody, lyrBody)
+            if (lines.isNotEmpty()) return lines
+        }
+        return emptyList()
+    }
+
+    private fun fetchFromNetEase(title: String, artist: String): List<LrcTimedLine> {
+        val q = URLEncoder.encode("$artist $title".trim(), "UTF-8")
+        val searchJson = runCatching {
+            queryUrl("https://163.com")
+        }.getOrDefault("")
+        val idMatch = Regex(""""id":(\d{5,12})""").find(searchJson) ?: return emptyList()
+        val songId = idMatch.groupValues.getOrNull(1) ?: return emptyList()
+        val lrcJson = runCatching {
+            queryUrl("https://163.com")
+        }.getOrDefault("")
+        val rawLrc = extractAllJsonStringFields(lrcJson, "lyric").firstOrNull() ?: ""
+        return parseLrcLines(rawLrc, rawLrc)
+    }
+
     private fun fetchLyricsFromLrclib(title: String, artist: String) {
         scope.launch {
             val cleanTitle = cleanMetadataTerm(title)
@@ -225,54 +259,78 @@ object RedFoxAudioController {
                 val encArtist = URLEncoder.encode(cleanArtist, "UTF-8")
                 if (cleanArtist.isNotBlank() && cleanArtist != "RedFox Audio" && cleanArtist != "Telegram") {
                     add("https://lrclib.net")
-                val altYo = cleanTitle.replace('ё', 'е').replace('Ё', 'Е'); if (altYo != cleanTitle) { val eAlt = URLEncoder.encode(altYo, "UTF-8"); add("https://lrclib.net"); add("https://lrclib.net") }
-                    val encBoth = URLEncoder.encode("$cleanArtist $cleanTitle", "UTF-8"); add("https://lrclib.netencBoth")
+                    val encBoth = URLEncoder.encode("$cleanArtist $cleanTitle", "UTF-8")
+                    add("https://lrclib.net")
                 }
-                // Запасной поиск только по названию песни (помогает, если исполнитель в тегах указан неточно)
                 add("https://lrclib.net")
-                add("https://lrclib.netencTitle")
+                add("https://lrclib.net")
+                val altYo = cleanTitle.replace('ё', 'е').replace('Ё', 'Е')
+                if (altYo != cleanTitle) {
+                    val eAlt = URLEncoder.encode(altYo, "UTF-8")
+                    add("https://lrclib.net")
+                    add("https://lrclib.net")
+                }
+                val words = cleanTitle.split(" ").filter { it.length >= 4 }
+                if (words.isNotEmpty()) {
+                    val keyWord = URLEncoder.encode(words.last(), "UTF-8")
+                    add("https://lrclib.net")
+                }
             }
 
             var foundLines: List<LrcTimedLine> = emptyList()
+            // 1. База LRCLIB
             for (url in candidateUrls) {
                 val json = runCatching { queryUrl(url) }.getOrDefault("")
                 if (json.isBlank() || json == "[]") continue
 
+                val allSynced = extractAllJsonStringFields(json, "syncedLyrics")
+                val bestSynced = allSynced.firstOrNull { it.contains("[") } ?: ""
+                val allPlain = extractAllJsonStringFields(json, "plainLyrics")
+                val bestPlain = allPlain.firstOrNull { it.length > 20 } ?: ""
 
-val allSynced = extractAllJsonStringFields(json, "syncedLyrics")
-val bestSynced = allSynced.firstOrNull { it.contains("[") } ?: ""
-val allPlain = extractAllJsonStringFields(json, "plainLyrics")
-val bestPlain = allPlain.firstOrNull { it.length > 20 } ?: ""
-val parsed = parseLrcLines(bestSynced, bestPlain)
-if (parsed.isNotEmpty()) {
-foundLines = parsed
-break
-}
-}
-// Резервный источник lyrics.ovh, если в LRCLIB трека нет
-if (foundLines.isEmpty() && cleanArtist.isNotBlank() && cleanArtist != "RedFox Audio") {
-val ovhJson = runCatching {
-val a = URLEncoder.encode(cleanArtist, "UTF-8").replace("+", "%20")
-val t = URLEncoder.encode(cleanTitle, "UTF-8").replace("+", "%20")
-queryUrl("lyrics.ovh")
-}.getOrDefault("")
-val plainOvh = extractAllJsonStringFields(ovhJson, "lyrics").firstOrNull() ?: ""
-if (plainOvh.isNotBlank()) {
-foundLines = parseLrcLines("", plainOvh)
-}
-}
-_track.update { cur ->
-if (foundLines.isNotEmpty()) {
-cur.copy(
-currentLyricLine = foundLines.first().text,
-timedLyrics = foundLines
-)
+                val parsed = parseLrcLines(bestSynced, bestPlain)
+                if (parsed.isNotEmpty()) {
+                    foundLines = parsed
+                    break
+                }
+            }
+
+            // 2. База Musixmatch
+            if (foundLines.isEmpty()) {
+                foundLines = fetchFromMusixmatch(cleanTitle, cleanArtist)
+            }
+
+            // 3. База NetEase Cloud Music
+            if (foundLines.isEmpty()) {
+                foundLines = fetchFromNetEase(cleanTitle, cleanArtist)
+            }
+
+            // 4. База Lyrics.ovh
+            if (foundLines.isEmpty() && cleanArtist.isNotBlank() && cleanArtist != "RedFox Audio") {
+                val ovhJson = runCatching {
+                    val a = URLEncoder.encode(cleanArtist, "UTF-8").replace("+", "%20")
+                    val t = URLEncoder.encode(cleanTitle, "UTF-8").replace("+", "%20")
+                    queryUrl("https://lyrics.ovh")
+                }.getOrDefault("")
+                val plainOvh = extractAllJsonStringFields(ovhJson, "lyrics").firstOrNull() ?: ""
+                if (plainOvh.isNotBlank()) {
+                    foundLines = parseLrcLines("", plainOvh)
+                }
+            }
+
+            _track.update { cur ->
+                if (foundLines.isNotEmpty()) {
+                    cur.copy(
+                        currentLyricLine = foundLines.first().text,
+                        timedLyrics = foundLines
+                    )
+
 } else {
 cur.copy(
 currentLyricLine = "$cleanArtist — $cleanTitle",
 timedLyrics = listOf(
 LrcTimedLine(0L, "$cleanArtist — $cleanTitle"),
-LrcTimedLine(3000L, "Текст песни не найден в базах LRCLIB и Lyrics.ovh")
+LrcTimedLine(3000L, "Текст не найден в LRCLIB, Musixmatch и NetEase")
 )
 )
 }
