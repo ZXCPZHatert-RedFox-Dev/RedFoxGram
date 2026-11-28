@@ -12,7 +12,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +39,33 @@ import com.redfox.gram.ui.components.RedFoxLocalImage
 import com.redfox.gram.ui.home.ChatPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+
+private val AccentPaperclipIcon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "AccentPaperclip",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 2.1f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(21.44f, 11.05f)
+            lineTo(12.25f, 20.24f)
+            arcTo(6f, 6f, 0f, isMoreThanHalf = false, isPositiveArc = true, 3.76f, 11.75f)
+            lineTo(12.95f, 2.56f)
+            arcTo(4f, 4f, 0f, isMoreThanHalf = false, isPositiveArc = true, 18.61f, 8.22f)
+            lineTo(9.41f, 17.41f)
+            arcTo(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 6.58f, 14.58f)
+            lineTo(15.07f, 6.1f)
+        }
+    }.build()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -292,7 +328,7 @@ shape = CircleShape,
 contentPadding = PaddingValues(horizontal = 12.dp),
 modifier = Modifier.height(50.dp)
 ) {
-Text("📎", style = MaterialTheme.typography.titleMedium)
+Icon(AccentPaperclipIcon, contentDescription = "Прикрепить", tint = MaterialTheme.colorScheme.primary)
 }
 OutlinedTextField(
 value = inputText,

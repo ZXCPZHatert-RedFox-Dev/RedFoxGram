@@ -37,7 +37,6 @@ fun ExpressiveWavyProgressBar(
         label = "wave_phase"
     )
 
-    // Плавное затухание амплитуды в ровную линию при паузе (как в Android 17 M3E)
     val animatedAmplitudeFactor by animateFloatAsState(
         targetValue = if (isPlaying) 1f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -57,7 +56,6 @@ fun ExpressiveWavyProgressBar(
         val clampedProgress = progress.coerceIn(0f, 1f)
         val activeEndX = pad + usableWidth * clampedProgress
 
-        // 1. Неактивная часть дорожки (ровная капсульная линия справа от бегунка)
         if (activeEndX + thumbRadius < size.width - pad) {
             drawLine(
                 color = trackColor,
@@ -68,7 +66,6 @@ fun ExpressiveWavyProgressBar(
             )
         }
 
-        // 2. Активная волнистая часть с плавным затуханием к концам (без резкого обрыва)
         val maxAmp = 4.2.dp.toPx() * animatedAmplitudeFactor
         val wavelengthPx = 28.dp.toPx()
         val fadeZonePx = 14.dp.toPx()
@@ -85,7 +82,6 @@ fun ExpressiveWavyProgressBar(
                 (distFromStart / fadeZonePx).coerceIn(0f, 1f),
                 (distFromEnd / fadeZonePx).coerceIn(0f, 1f)
             )
-            // Плавная S-кривая затухания (smoothstep), чтобы волна идеально входила в центр бегунка
             val smoothEnvelope = edgeEnvelope * edgeEnvelope * (3f - 2f * edgeEnvelope)
             val angle = ((x - pad) / wavelengthPx) * (2.0 * PI).toFloat() - phase
             val y = midY + sin(angle) * maxAmp * smoothEnvelope
@@ -110,7 +106,6 @@ fun ExpressiveWavyProgressBar(
             )
         )
 
-        // 3. Круглый бегунок M3E строго по центру конца волны
         drawCircle(
             color = activeColor,
             radius = thumbRadius,
