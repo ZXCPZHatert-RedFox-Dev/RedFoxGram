@@ -18,6 +18,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 object RedFoxTdEngine {
+    data class SyncedTelegramTheme(
+        val name: String,
+        val primaryColorHex: Long,
+        val containerColorHex: Long,
+        val backgroundColorHex: Long
+    )
+
+    private val _syncedTelegramThemes = MutableStateFlow<List<SyncedTelegramTheme>>(emptyList())
+    val syncedTelegramThemes = _syncedTelegramThemes.asStateFlow()
+
     private val _searchResults = MutableStateFlow<List<ChatPreview>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
 
@@ -135,6 +145,29 @@ object RedFoxTdEngine {
                                     if (it.id == upd.oldMessageId) it.copy(id = msg.id, isSentToServer = true) else it
                                 }
                             }
+                        }
+                    }
+                }
+
+                                // Синхронизация облачных тем аккаунта Telegram (chatThemesUpdates)
+                launch {
+                    tdl.chatThemesUpdates.collect { upd ->
+                        val mapped = upd.chatThemes.mapNotNull { th ->
+                            val dark = th.darkSettings ?: th.lightSettings
+                            val accent = dark?.accentColor?.toLong()?.and(0xFFFFFFFFL) ?: 0xFFFFB4A1L
+                            val bg = 0xFF141218L
+                            val fillPrimary = 0xFF000000L or (accent and 0x00FFFFFFL)
+                            val fillBg = 0xFF000000L or (bg and 0x00FFFFFFL)
+                            val fillContainer = 0xFF1F1C24L
+                            SyncedTelegramTheme(
+                                name = "Тема TG ${th.name}",
+                                primaryColorHex = fillPrimary,
+                                containerColorHex = fillContainer,
+                                backgroundColorHex = fillBg
+                            )
+                        }
+                        if (mapped.isNotEmpty()) {
+                            _syncedTelegramThemes.value = mapped
                         }
                     }
                 }
