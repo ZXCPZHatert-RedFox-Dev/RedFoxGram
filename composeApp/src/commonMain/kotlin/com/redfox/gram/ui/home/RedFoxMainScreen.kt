@@ -330,10 +330,11 @@ fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
 }
 }
 }
+            val activeTrack by com.redfox.gram.media.RedFoxAudioController.track.collectAsState()
 if (settings.liveLrcLyricsBar) {
 LiveLrcMiniBar(
-trackTitle = "Midnight City (M3E Remix)",
-artist = "RedFox Audio",
+trackTitle = activeTrack.title,
+artist = activeTrack.artist,
 currentLine = "♪ Waiting in a car, waiting for a ride in the dark...",
 isPlaying = isPlaying,
 onTogglePlay = { isPlaying = !isPlaying },
