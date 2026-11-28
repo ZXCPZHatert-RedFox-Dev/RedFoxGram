@@ -343,44 +343,8 @@ onOpenFullPlayer = { showFullPlayer = true }
 }
 }
 },
-bottomBar = {
-Box(
-modifier = Modifier
-.fillMaxWidth()
-.padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
-contentAlignment = Alignment.Center
-) {
-Surface(
-shape = CircleShape,
-color = MaterialTheme.colorScheme.surfaceContainerHighest,
-shadowElevation = 6.dp
-) {
-Row(
-modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-horizontalArrangement = Arrangement.spacedBy(8.dp),
-verticalAlignment = Alignment.CenterVertically
-) {
-FilledTonalButton(
-onClick = {
-RedFoxConfig.update { current: RedFoxSettingsState ->
-current.copy(ghostReadMessages = !current.ghostReadMessages)
-}
-},
-shape = CircleShape
-) {
-Text(if (settings.ghostReadMessages) "Призрак: ВКЛ" else "Призрак: ВЫКЛ")
-}
-Button(
-onClick = { showTweaks = true },
-shape = CircleShape
-) {
-Text("All-in-One M3E")
-}
-}
-}
-}
-}
-) { padding ->
+bottomBar = { val starShape = remember { buildExpressiveAvatarShape(ExpressiveAvatarStyle.FLOWER_12) }; Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) { Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest, shadowElevation = 6.dp) { Row(modifier = Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.clickable { showTweaks = false }) { Text("Чаты", modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }; IconButton(onClick = { showTweaks = true }, modifier = Modifier.size(44.dp)) { Text("⚙", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary) } } }; Spacer(Modifier.width(12.dp)); Surface(onClick = { isSearchMode = true }, shape = starShape, color = MaterialTheme.colorScheme.primary, shadowElevation = 6.dp, modifier = Modifier.size(58.dp)) { Box(contentAlignment = Alignment.Center) { Text("+", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary) } } } }
+    ) { padding ->
 LazyColumn(
 modifier = Modifier
 .fillMaxSize()
