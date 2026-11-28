@@ -75,7 +75,10 @@ object RedFoxTdEngine {
         val isEdited: Boolean = false,
         val isSentToServer: Boolean = true,
         val mediaLocalPath: String = "",
-        val replyToText: String = ""
+        val replyToText: String = "",
+        val docFileId: Int = 0,
+        val docFileName: String = "",
+        val isAudio: Boolean = false
     )
 
     private val _activeChatMessages = MutableStateFlow<List<LiveMessageItem>>(emptyList())
@@ -510,6 +513,35 @@ forceRead = true
         }
     }
 
+    
+    fun downloadAndOpenMessageFile(messageId: Long, fileId: Int, existingPath: String, isAudio: Boolean, title: String) {
+        if (existingPath.isNotBlank()) {
+            if (isAudio) {
+                com.redfox.gram.media.RedFoxAudioController.playTrack(title, "Telegram", existingPath)
+            } else {
+                com.redfox.gram.media.openLocalFileWithSystem(existingPath)
+            }
+            return
+        }
+        if (fileId == 0) return
+        scope.launch {
+            val tdl = client ?: return@launch
+            fileIdToMsgId.put(fileId, messageId)
+            val res = tdl.downloadFile(fileId = fileId, priority = 16, offset = 0L, limit = 0L, synchronous = true) as? TdlResult.Success
+            val path = res?.result?.local?.path ?: ""
+            if (path.isNotBlank()) {
+                _activeChatMessages.update { list ->
+                    list.map { if (it.id == messageId) it.copy(mediaLocalPath = path) else it }
+                }
+                if (isAudio) {
+                    com.redfox.gram.media.RedFoxAudioController.playTrack(title, "Telegram", path)
+                } else {
+                    com.redfox.gram.media.openLocalFileWithSystem(path)
+                }
+            }
+        }
+    }
+
     fun sendTextMessage(chatId: Long, text: String) {
 if (text.isBlank()) return
 scope.launch {
@@ -544,15 +576,63 @@ is MessagePoll -> "📊 Опрос: ${c.poll.question.text}"
 else -> "✨ Медиа / Вложение"
 }
 private fun mapTdMessage(msg: Message): LiveMessageItem {
-return LiveMessageItem(
-id = msg.id,
-senderName = if (msg.isOutgoing) "Вы" else "Собеседник",
-text = extractContentText(msg.content),
-isOutgoing = msg.isOutgoing,
-timeText = "TG",
-isDeletedSaved = msg.id in deletedMessageIds
-)
-}
+        var docId = 0
+        var docName = ""
+        var isAudioFile = false
+        val photoPath = when (val c = msg.content) {
+            is MessagePhoto -> {
+                val f = c.photo.sizes.lastOrNull()?.photo
+                if (f != null) {
+                    if (f.local.isDownloadingCompleted && f.local.path.isNotBlank()) f.local.path
+                    else if (f.id != 0) {
+                        fileIdToMsgId.put(f.id, msg.id)
+                        scope.launch { client?.downloadFile(fileId = f.id, priority = 14, offset = 0L, limit = 0L, synchronous = false) }
+                        ""
+                    } else ""
+                } else ""
+            }
+            is MessageDocument -> {
+                docId = c.document.document.id
+                docName = c.document.fileName
+                if (c.document.document.local.isDownloadingCompleted && c.document.document.local.path.isNotBlank()) {
+                    c.document.document.local.path
+                } else ""
+            }
+            is MessageAudio -> {
+                docId = c.audio.audio.id
+                val artistPart = c.audio.performer.trim()
+                val titlePart = c.audio.title.ifBlank { c.audio.fileName }.trim()
+                docName = if (artistPart.isNotBlank()) "$artistPart — $titlePart" else titlePart
+                isAudioFile = true
+                if (c.audio.audio.local.isDownloadingCompleted && c.audio.audio.local.path.isNotBlank()) {
+                    c.audio.audio.local.path
+                } else ""
+            }
+            is MessageVoiceNote -> {
+                docId = c.voiceNote.voice.id
+                docName = "Голосовое сообщение"
+                isAudioFile = true
+                if (c.voiceNote.voice.local.isDownloadingCompleted && c.voiceNote.voice.local.path.isNotBlank()) {
+                    c.voiceNote.voice.local.path
+                } else ""
+            }
+            else -> ""
+        }
+
+        return LiveMessageItem(
+            id = msg.id,
+            senderName = if (msg.isOutgoing) "Вы" else "Собеседник",
+            text = extractContentText(msg.content),
+            isOutgoing = msg.isOutgoing,
+            timeText = "TG",
+            isDeletedSaved = msg.id in deletedMessageIds,
+            isSentToServer = msg.sendingState == null,
+            mediaLocalPath = photoPath,
+            docFileId = docId,
+            docFileName = docName,
+            isAudio = isAudioFile
+        )
+    }
 
     private val _qrLoginLink = MutableStateFlow<String?>(null)
     val qrLoginLink = _qrLoginLink.asStateFlow()

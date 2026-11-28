@@ -432,7 +432,68 @@ color = MaterialTheme.colorScheme.error
 )
 Spacer(Modifier.height(4.dp))
 }
-// Отображение реальной фотографии из Telegram с подсветкой Ambient Mode
+if (msg.docFileName.isNotBlank() || msg.isAudio) {
+                                        val displayDocTitle = msg.docFileName.ifBlank { msg.text }
+                                        Surface(
+                                            shape = RoundedCornerShape(18.dp),
+                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(bottom = 6.dp)
+                                                .clickable {
+                                                    uploadingFileName = displayDocTitle
+                                                    RedFoxTdEngine.downloadAndOpenMessageFile(
+                                                        messageId = msg.id,
+                                                        fileId = msg.docFileId,
+                                                        existingPath = msg.mediaLocalPath,
+                                                        isAudio = msg.isAudio,
+                                                        title = displayDocTitle
+                                                    )
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(38.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Text(
+                                                            text = if (msg.isAudio) "▶" else "⬇",
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.onPrimary
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(Modifier.width(10.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = displayDocTitle,
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        fontWeight = FontWeight.Bold,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                    )
+                                                    Text(
+                                                        text = when {
+                                                            msg.isAudio -> "Нажмите, чтобы слушать внутри RedFoxGram"
+                                                            msg.mediaLocalPath.isNotBlank() -> "Скачано в кэш • Нажмите, чтобы открыть"
+                                                            else -> "Нажмите, чтобы скачать и открыть"
+                                                        },
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Отображение реальной фотографии из Telegram с подсветкой Ambient Mode
 if (msg.mediaLocalPath.isNotBlank()) {
 RedFoxLocalImage(
 filePath = msg.mediaLocalPath,
