@@ -52,14 +52,14 @@ fun RedFoxSplashOverlay(
             targetValue = 1.05f,
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
+                stiffness = Spring.StiffnessMedium
             )
         )
         rotationAnim.animateTo(
             targetValue = 0f,
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessLow
+                stiffness = Spring.StiffnessMedium
             )
         )
         delay(550)

@@ -3,6 +3,9 @@ package com.redfox.gram
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import com.redfox.gram.auth.AuthStep
 import com.redfox.gram.auth.RedFoxAuthManager
@@ -19,7 +22,7 @@ import com.redfox.gram.ui.theme.RedFoxM3ETheme
 fun App(androidFilesDir: String? = null) {
     LaunchedEffect(Unit) {
         val dbPath = if (androidFilesDir != null) "$androidFilesDir/redfox_tdlib" else "redfox_tdlib_db"
-        RedFoxTdEngine.start(dbDirectory = dbPath)
+        withContext(Dispatchers.IO) { RedFoxTdEngine.start(dbDirectory = dbPath) }
     }
 
     RedFoxM3ETheme {
@@ -27,6 +30,7 @@ fun App(androidFilesDir: String? = null) {
         val settings by RedFoxConfig.state.collectAsState()
         var showProxyFromAuth by remember { mutableStateOf(false) }
         var splashDone by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { delay(1350L); splashDone = true }
 
         val launchStyle = if (settings.springPhysicsScroll) {
             LaunchAnimationStyle.M3E_FLOWER_FOX
