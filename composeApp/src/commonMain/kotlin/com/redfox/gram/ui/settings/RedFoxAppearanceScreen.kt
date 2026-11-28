@@ -440,7 +440,8 @@ val presets = listOf(
 "AMOLED" to "AMOLED Чёрная",
 "FOX" to "Fox Sunset",
 "TEAL" to "Cyber Teal",
-"ROSE" to "Sakura Rose"
+"ROSE" to "Sakura Rose",
+                            "RUBY" to "Ruby Monet (Opex)"
 )
 presets.chunked(2).forEach { rowPresets ->
 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
