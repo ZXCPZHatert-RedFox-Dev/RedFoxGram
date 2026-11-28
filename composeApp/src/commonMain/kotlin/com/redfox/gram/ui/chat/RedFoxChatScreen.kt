@@ -85,6 +85,7 @@ fun RedFoxChatScreen(
     var inputText by remember { mutableStateOf("") }
     var selectedMessage by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
     var showInspector by remember { mutableStateOf(false) }
+    var showPeerProfile by remember { mutableStateOf(false) }
     var replyTarget by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
     var editingTarget by remember { mutableStateOf<RedFoxTdEngine.LiveMessageItem?>(null) }
     var fullscreenPhotoPath by remember { mutableStateOf<String?>(null) }
@@ -100,6 +101,7 @@ fun RedFoxChatScreen(
         inputText = ""
     }
 
+    if (showPeerProfile) { RedFoxPeerProfileScreen(chat = chat, onBack = { showPeerProfile = false }); return }
     LaunchedEffect(chat.id) {
         RedFoxTdEngine.openChatHistory(chat.id)
     }

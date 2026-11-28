@@ -60,7 +60,11 @@ data class RedFoxSettingsState(
     val sendPhotosUncompressed: Boolean = false,
     val confirmBeforeCallOrVoice: Boolean = true,
     val autoTranslateForeign: Boolean = false,
-    val powerSavingMode: Boolean = false
+    val powerSavingMode: Boolean = false,
+    val duoPartnerChatId: Long = 0L,
+    val duoPartnerName: String = "",
+    val duoStartTimestampMs: Long = 0L,
+    val chatParticleEffect: String = "SAKURA"
 )
 
 object RedFoxConfig {
