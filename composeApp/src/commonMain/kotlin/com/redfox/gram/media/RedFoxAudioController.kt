@@ -225,6 +225,7 @@ object RedFoxAudioController {
                 val encArtist = URLEncoder.encode(cleanArtist, "UTF-8")
                 if (cleanArtist.isNotBlank() && cleanArtist != "RedFox Audio" && cleanArtist != "Telegram") {
                     add("https://lrclib.net")
+                val altYo = cleanTitle.replace('ё', 'е').replace('Ё', 'Е'); if (altYo != cleanTitle) { val eAlt = URLEncoder.encode(altYo, "UTF-8"); add("https://lrclib.net"); add("https://lrclib.net") }
                     val encBoth = URLEncoder.encode("$cleanArtist $cleanTitle", "UTF-8"); add("https://lrclib.netencBoth")
                 }
                 // Запасной поиск только по названию песни (помогает, если исполнитель в тегах указан неточно)
